@@ -61,6 +61,8 @@ uv run --group docs sphinx-build -b html -W docs docs/_build/html          # str
 
 Autodoc discovers the package via the editable install in `.venv/`, so no `sys.path` gymnastics in `conf.py`. If you add a new sub-module that should show up in the API reference, add an `automodule` stanza in `docs/api.rst`.
 
+**Hosting.** The docs are published to GitHub Pages, not ReadTheDocs — we use the RTD theme without the RTD service. `.github/workflows/docs.yml` builds and deploys on every push to `master` via GitHub's Pages-from-Actions flow (no `gh-pages` branch). On PRs, `ci.yml`'s `docs-build` job runs the same `sphinx-build -W` but without deploying, so doc regressions fail the PR check before merge. One-time repo setup: **Settings → Pages → Build and deployment → Source: GitHub Actions**. Without that, the deploy workflow has nothing to push to.
+
 ## Versioning and releases
 
 Version is managed manually via `bump-my-version` (configured in `pyproject.toml` under `[tool.bumpversion]`). The single source of truth is `__version__` in `src/asyoulikeit/__init__.py`; setuptools reads it via `[tool.setuptools.dynamic]` and exposes it as the wheel's installed version. Do not edit the version by hand in more than one place — let `bump-my-version` update both the module and the `[tool.bumpversion] current_version` config in lock-step.
@@ -77,13 +79,14 @@ Each real bump produces one commit (`Bump version: X.Y.Z → X.Y.Z+1`) and one a
 
 ## CI and publishing
 
-Three workflows under `.github/workflows/`:
+Four workflows under `.github/workflows/`:
 
 - `test.yml` — reusable (`on: workflow_call`). Resolves the earliest and latest supported Python versions by reading `pyproject.toml` classifiers, then runs the full pytest suite on the 3-OS × 2-Python-version matrix. Critically, tests run **against the installed wheel, not the editable source tree**: `uv sync --no-install-project` → `uv build` → `uv pip install dist/*.whl` → `uv run --no-project pytest`. This catches packaging blunders (missing `package-data`, un-shipped `py.typed`, unregistered entry points) that an editable install would hide.
-- `ci.yml` — triggers on push to `master` and pull requests. Calls `test.yml` and additionally runs the README generator's `--check` as a safety net against anyone bypassing the pre-commit hook.
+- `ci.yml` — triggers on push to `master` and pull requests. Calls `test.yml` and additionally runs (a) the README generator's `--check` as a safety net against anyone bypassing the pre-commit hook, and (b) a strict Sphinx build (`sphinx-build -W`) so doc breakages fail the PR before merge.
 - `publish.yml` — triggers on `v*` tags (the ones `bump-my-version` produces). Re-runs `test.yml`, then `uv publish`es to PyPI. The `needs: test` dependency guarantees publication only happens after a full green matrix on the exact tagged commit. Uses `UV_PUBLISH_TOKEN` (from the `PYPI_TOKEN` repo secret, scoped to the `pypi` environment); trusted publishing via OIDC is also supported if configured.
+- `docs.yml` — triggers on push to `master` (and manual dispatch). Builds the Sphinx site and deploys it to GitHub Pages via `actions/deploy-pages`. Uses a `pages` concurrency group so simultaneous pushes don't race each other into a stuck Pages state.
 
-To release: run `bump-my-version bump <level>` on a clean `master`, then `git push --follow-tags`. The push of the commit triggers `ci.yml`; the push of the tag triggers `publish.yml`.
+To release: run `bump-my-version bump <level>` on a clean `master`, then `git push --follow-tags`. The push of the commit triggers `ci.yml` and `docs.yml`; the push of the tag triggers `publish.yml`.
 
 ## Architecture
 
