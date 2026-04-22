@@ -1,0 +1,106 @@
+Command-line options
+====================
+
+Any tool built with ``asyoulikeit`` gains a standard set of
+output-formatting options on every ``@tabulated_output``-decorated
+command. If a project documents its CLI as being powered by
+``asyoulikeit``, everything on this page applies.
+
+
+``--as <format>``
+-----------------
+
+Selects the output format. Three values ship with ``asyoulikeit``:
+
+``display``
+  Human-facing output: bordered tables, colour, bold and italic
+  typography. The default when the command is attached to a terminal.
+
+``tsv``
+  Tab-separated values, one row per line, with the column headers
+  emitted as a comment prefix (``# Name<TAB>Role<TAB>…``) so tools like
+  ``awk``, ``cut``, and ``grep`` can skip the header line without a
+  special flag. The default when stdout is a pipe.
+
+``json``
+  A pretty-printed JSON object. All reports from one invocation are
+  collected under a top-level ``"tables"`` key, with per-report
+  metadata, column schema, and structured rows. This is the format to
+  pick when you're consuming the output from another program, or
+  piping it through ``jq``.
+
+Individual projects are free to register additional formats; run any
+command with ``--help`` to see the full list available in that tool.
+
+
+``--report <name>``
+-------------------
+
+Names one of the reports the command produces. Pass it multiple times
+to request several named reports. When omitted, the command's default
+— usually all reports — is shown. Unknown names produce a warning on
+stderr listing the reports that were actually available.
+
+.. code-block:: bash
+
+   mytool status --report users                    # just the users table
+   mytool status --report users --report groups    # both, in the order given
+
+
+``--header`` / ``--no-header``
+------------------------------
+
+Overrides the command's default about whether to emit column headings.
+Behaviour varies by format:
+
+- For ``tsv``, ``--no-header`` suppresses the ``# Name<TAB>…`` comment
+  line entirely, leaving only data rows — useful when feeding
+  fixed-schema output into a downstream tool that already knows the
+  columns.
+- For ``display``, ``--no-header`` drops both the column headers and
+  the title / description above and below the table.
+- For ``json``, the flag has no effect: JSON is self-describing and
+  always includes the schema metadata.
+
+
+``--detailed`` / ``--essential``
+--------------------------------
+
+Controls how much of each report is shown. Tables built with
+``asyoulikeit`` can mark some columns and rows as supplementary
+("detail") versus core ("essential"). The two flags override the
+format-specific default:
+
+- ``--essential`` drops every detail column and detail row. Use it
+  when you want the minimum, parse-friendly view.
+- ``--detailed`` keeps every detail column and detail row. Use it when
+  you want the maximum, human-friendly view.
+
+When neither flag is given, the format decides for itself. ``tsv``
+picks *essential* (machine-oriented); ``display`` and ``json`` pick
+*detailed* (self-describing or human-facing).
+
+
+Combining options
+-----------------
+
+The options compose freely:
+
+.. code-block:: bash
+
+   # pipe-friendly, minimal view
+   mytool status --as tsv --essential --no-header | awk -F'\t' '{print $1}'
+
+   # maximum detail as JSON for a script
+   mytool status --as json --detailed | jq '.tables.users.rows'
+
+   # human-readable, one specific report only
+   mytool status --report users
+
+   # exactly what you'd get by piping, but without actually piping
+   mytool status --as tsv
+
+As a rule of thumb: a command attached to a terminal with no options
+gives you the fullest human-readable form. The same command in a
+pipeline gives you the most machine-readable form. Everything in
+between is explicit.

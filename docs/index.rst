@@ -1,3 +1,10 @@
+.. image:: _static/logo.svg
+   :align: center
+   :alt: asyoulikeit
+   :width: 500px
+
+|
+
 asyoulikeit
 ===========
 
@@ -8,6 +15,8 @@ pipes, display for humans.
    :maxdepth: 2
    :caption: Contents
 
+   usage
+   cli
    api
 
 
