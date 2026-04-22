@@ -53,12 +53,12 @@ def list_wives():
         .add_column("born", "Born")
         .add_column("fate", "Fate")
         .add_column("queenship", "Queenship", importance=Importance.DETAIL)
-        .add_row(name="Catherine of Aragon", born=1485, fate="Divorced", queenship="1509–1533")
-        .add_row(name="Anne Boleyn", born=1501, fate="Beheaded", queenship="1533–1536")
-        .add_row(name="Jane Seymour", born=1508, fate="Died", queenship="1536–1537")
+        .add_row(name="Catherine of Aragon", born=1485, fate="Divorced", queenship="1509-1533")
+        .add_row(name="Anne Boleyn", born=1501, fate="Beheaded", queenship="1533-1536")
+        .add_row(name="Jane Seymour", born=1508, fate="Died", queenship="1536-1537")
         .add_row(name="Anne of Cleves", born=1515, fate="Divorced", queenship="1540")
-        .add_row(name="Catherine Howard", born=1523, fate="Beheaded", queenship="1540–1542")
-        .add_row(name="Catherine Parr", born=1512, fate="Survived", queenship="1543–1547")
+        .add_row(name="Catherine Howard", born=1523, fate="Beheaded", queenship="1540-1542")
+        .add_row(name="Catherine Parr", born=1512, fate="Survived", queenship="1543-1547")
     )
     return Reports(wives=Report(data=data))
 
@@ -119,19 +119,19 @@ Catherine Parr	1512	Survived
           "name": "Catherine of Aragon",
           "born": 1485,
           "fate": "Divorced",
-          "queenship": "1509\u20131533"
+          "queenship": "1509-1533"
         },
         {
           "name": "Anne Boleyn",
           "born": 1501,
           "fate": "Beheaded",
-          "queenship": "1533\u20131536"
+          "queenship": "1533-1536"
         },
         {
           "name": "Jane Seymour",
           "born": 1508,
           "fate": "Died",
-          "queenship": "1536\u20131537"
+          "queenship": "1536-1537"
         },
         {
           "name": "Anne of Cleves",
@@ -143,13 +143,13 @@ Catherine Parr	1512	Survived
           "name": "Catherine Howard",
           "born": 1523,
           "fate": "Beheaded",
-          "queenship": "1540\u20131542"
+          "queenship": "1540-1542"
         },
         {
           "name": "Catherine Parr",
           "born": 1512,
           "fate": "Survived",
-          "queenship": "1543\u20131547"
+          "queenship": "1543-1547"
         }
       ]
     }
@@ -164,12 +164,12 @@ Catherine Parr	1512	Survived
 ┏━━━━━━━━━━━━━━━━━━━━━┳━━━━━━┳━━━━━━━━━━┳━━━━━━━━━━━┓
 ┃ Name                ┃ Born ┃ Fate     ┃ Queenship ┃
 ┡━━━━━━━━━━━━━━━━━━━━━╇━━━━━━╇━━━━━━━━━━╇━━━━━━━━━━━┩
-│ Catherine of Aragon │ 1485 │ Divorced │ 1509–1533 │
-│ Anne Boleyn         │ 1501 │ Beheaded │ 1533–1536 │
-│ Jane Seymour        │ 1508 │ Died     │ 1536–1537 │
+│ Catherine of Aragon │ 1485 │ Divorced │ 1509-1533 │
+│ Anne Boleyn         │ 1501 │ Beheaded │ 1533-1536 │
+│ Jane Seymour        │ 1508 │ Died     │ 1536-1537 │
 │ Anne of Cleves      │ 1515 │ Divorced │ 1540      │
-│ Catherine Howard    │ 1523 │ Beheaded │ 1540–1542 │
-│ Catherine Parr      │ 1512 │ Survived │ 1543–1547 │
+│ Catherine Howard    │ 1523 │ Beheaded │ 1540-1542 │
+│ Catherine Parr      │ 1512 │ Survived │ 1543-1547 │
 └─────────────────────┴──────┴──────────┴───────────┘
     Divorced, beheaded, died; divorced, beheaded,    
                       survived.
