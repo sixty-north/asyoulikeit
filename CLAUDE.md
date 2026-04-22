@@ -41,6 +41,26 @@ uv run pre-commit install
 
 When you change the public API, the example will change (or start failing), the generator will produce a different README, and the hook will block the commit until you regenerate. **Never hand-edit `README.md`** — edit the template or the example instead.
 
+## Sphinx documentation
+
+Narrative docs live under `docs/`, built with Sphinx + the ReadTheDocs theme. The layout is the Sphinx default:
+
+- `docs/conf.py` — the one and only config file. Version is read at build time via `importlib.metadata.version("asyoulikeit")`, so `bump-my-version` bumps propagate automatically. Docstrings across the code are Google-style; `sphinx.ext.napoleon` handles them.
+- `docs/index.rst` — landing page + top-level toctree.
+- `docs/api.rst` — auto-generated API reference (`automodule` against each public sub-module).
+- `docs/_static/` — shared with the README (`logo.svg`, `logo.png`). Sphinx picks up the logo from `html_logo = "_static/logo.svg"`.
+- `docs/_build/` — build output (gitignored).
+
+Build commands (use the `docs` dependency group so sphinx isn't polluting the default `uv sync`):
+
+```bash
+uv sync --group docs                                                       # install docs deps
+uv run --group docs sphinx-build -b html docs docs/_build/html             # build
+uv run --group docs sphinx-build -b html -W docs docs/_build/html          # strict: warnings = errors
+```
+
+Autodoc discovers the package via the editable install in `.venv/`, so no `sys.path` gymnastics in `conf.py`. If you add a new sub-module that should show up in the API reference, add an `automodule` stanza in `docs/api.rst`.
+
 ## Versioning and releases
 
 Version is managed manually via `bump-my-version` (configured in `pyproject.toml` under `[tool.bumpversion]`). The single source of truth is `__version__` in `src/asyoulikeit/__init__.py`; setuptools reads it via `[tool.setuptools.dynamic]` and exposes it as the wheel's installed version. Do not edit the version by hand in more than one place — let `bump-my-version` update both the module and the `[tool.bumpversion] current_version` config in lock-step.

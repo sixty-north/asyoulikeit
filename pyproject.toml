@@ -63,6 +63,11 @@ testpaths = ["tests"]
 test = [
     "pytest>=8",
 ]
+docs = [
+    "sphinx>=8",
+    "sphinx-rtd-theme>=2",
+    "sphinx-copybutton>=0.5",
+]
 dev = [
     "bump-my-version>=0.28",
     "jinja2>=3.1",

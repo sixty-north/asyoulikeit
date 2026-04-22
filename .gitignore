@@ -20,6 +20,9 @@ dist/
 # commit it.
 uv.lock
 
+# Sphinx build output
+docs/_build/
+
 # Test, coverage, type-check, lint caches
 .pytest_cache/
 .coverage
