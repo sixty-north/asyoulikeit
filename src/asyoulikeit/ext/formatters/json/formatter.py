@@ -3,81 +3,122 @@
 import json
 
 from asyoulikeit.formatter import Formatter
-from asyoulikeit.tabular_data import Reports, DetailLevel
+from asyoulikeit.tabular_data import DetailLevel, Importance, Reports, TableContent
+from asyoulikeit.tree_data import Node, TreeContent
 
 
 class JsonFormatter(Formatter):
     """JSON formatter for structured data output.
 
-    Outputs data as a JSON object with a top-level "tables" key containing
-    named reports. Each report has the same structure as the previous single-table
-    JSON output (metadata, columns, rows).
+    Outputs data as a JSON object with a top-level ``"tables"`` key
+    containing named reports. Each report carries its own ``"metadata"``
+    (including a ``"kind"`` discriminator of ``"table"`` or ``"tree"``),
+    its ``"columns"`` schema, and then either ``"rows"`` (for table
+    content) or ``"roots"`` (for tree content) carrying the data.
 
-    This format is suitable for consumption by web APIs and data processing tools,
-    and leaves room for future top-level additions (e.g., generation metadata).
+    Consumers differentiate the two shapes via ``metadata.kind`` or,
+    structurally, by which of ``rows``/``roots`` is present.
 
-    Note: JSON format always includes metadata regardless of header flag,
-    as JSON is self-describing by nature.
+    JSON always emits full metadata regardless of the ``header`` flag,
+    since the format is self-describing by nature.
     """
 
     def format(self, reports: Reports) -> str:
-        """Format reports as structured JSON object.
+        """Format reports as a structured JSON object.
 
         Args:
-            reports: A Reports object containing one or more named reports
+            reports: A Reports object containing one or more named reports.
 
         Returns:
-            Pretty-printed JSON string with top-level "tables" key containing
-            each report with its metadata, columns and rows structure
+            Pretty-printed JSON string with a top-level ``"tables"`` key.
         """
         tables = {}
-
         for report_name, report in reports.items():
-            # Use report's detail_level preference (may have been overridden by CLI)
+            # JSON defaults to showing everything.
             detail_level = report.detail_level
-
-            # JSON defaults to showing all columns (self-describing format)
             if detail_level == DetailLevel.AUTO:
                 detail_level = DetailLevel.DETAILED
 
-            # Filter columns based on detail_level
-            columns_to_output = (
-                report.data.columns if detail_level == DetailLevel.DETAILED
-                else report.data.essential_columns
-            )
+            if isinstance(report.data, TableContent):
+                tables[report_name] = self._format_table(report.data, detail_level)
+            elif isinstance(report.data, TreeContent):
+                tables[report_name] = self._format_tree(report.data, detail_level)
+            else:
+                raise TypeError(
+                    f"JsonFormatter does not know how to render "
+                    f"{type(report.data).__name__} content "
+                    f"(kind={report.data.kind()!r})"
+                )
 
-            # Filter rows based on detail_level
-            rows_to_output = report.data.rows_for_detail_level(detail_level)
+        return json.dumps({"tables": tables}, indent=2)
 
-            # Build column metadata including header flag
-            columns = [
+    # -- table --------------------------------------------------------------
+
+    def _format_table(self, data: TableContent, detail_level: DetailLevel) -> dict:
+        columns_to_output = (
+            data.columns if detail_level == DetailLevel.DETAILED
+            else data.essential_columns
+        )
+        rows_to_output = data.rows_for_detail_level(detail_level)
+
+        return {
+            "metadata": {
+                "kind": "table",
+                "title": data.title,
+                "description": data.description,
+                "present_transposed": data.present_transposed,
+            },
+            "columns": [
                 {"key": col.key, "label": col.label, "header": col.header}
                 for col in columns_to_output
-            ]
-
-            # Build rows using column keys (not labels), filtering to selected columns
-            rows = [
+            ],
+            "rows": [
                 {col.key: row[col.key] for col in columns_to_output}
                 for row in rows_to_output
-            ]
-
-            # Build metadata object
-            metadata = {
-                "title": report.data.title,
-                "description": report.data.description,
-                "present_transposed": report.data.present_transposed
-            }
-
-            # Each table has the same structure as the old single-table JSON
-            tables[report_name] = {
-                "metadata": metadata,
-                "columns": columns,
-                "rows": rows
-            }
-
-        # Top-level structure with "tables" key
-        output = {
-            "tables": tables
+            ],
         }
 
-        return json.dumps(output, indent=2)
+    # -- tree ---------------------------------------------------------------
+
+    def _format_tree(self, data: TreeContent, detail_level: DetailLevel) -> dict:
+        columns_to_output = (
+            data.columns if detail_level == DetailLevel.DETAILED
+            else data.essential_columns
+        )
+        visible_roots = [
+            self._serialize_node(root, columns_to_output, detail_level)
+            for root in data.roots
+            if self._node_visible(root, detail_level)
+        ]
+
+        return {
+            "metadata": {
+                "kind": "tree",
+                "title": data.title,
+                "description": data.description,
+            },
+            "columns": [
+                {"key": col.key, "label": col.label, "header": col.header}
+                for col in columns_to_output
+            ],
+            "roots": visible_roots,
+        }
+
+    def _serialize_node(
+        self, node: Node, columns, detail_level: DetailLevel
+    ) -> dict:
+        return {
+            "values": {col.key: node.values[col.key] for col in columns},
+            "children": [
+                self._serialize_node(child, columns, detail_level)
+                for child in node.children
+                if self._node_visible(child, detail_level)
+            ],
+        }
+
+    @staticmethod
+    def _node_visible(node: Node, detail_level: DetailLevel) -> bool:
+        """A node is hidden under --essential iff it's tagged DETAIL."""
+        if detail_level == DetailLevel.ESSENTIAL and node.importance == Importance.DETAIL:
+            return False
+        return True

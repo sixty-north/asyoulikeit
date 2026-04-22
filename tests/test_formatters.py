@@ -5,11 +5,13 @@ import re
 import pytest
 
 from asyoulikeit.tabular_data import TableContent, Reports, Report
+from asyoulikeit.tree_data import TreeContent
 from asyoulikeit.formatter import (
     create_formatter,
     format_as,
     FormatterExtensionError,
 )
+from asyoulikeit import Importance
 
 
 def strip_ansi_codes(text: str) -> str:
@@ -113,7 +115,7 @@ class TestJSONFormatter:
         assert parsed == {
             "tables": {
                 "data": {
-                    "metadata": {"title": None, "description": None, "present_transposed": False},
+                    "metadata": {"kind": "table", "title": None, "description": None, "present_transposed": False},
                     "columns": [{"key": "name", "label": "Name", "header": False}],
                     "rows": []
                 }
@@ -135,7 +137,7 @@ class TestJSONFormatter:
         assert parsed == {
             "tables": {
                 "data": {
-                    "metadata": {"title": None, "description": None, "present_transposed": False},
+                    "metadata": {"kind": "table", "title": None, "description": None, "present_transposed": False},
                     "columns": [{"key": "name", "label": "Name", "header": False}],
                     "rows": [{"name": "Alice"}]
                 }
@@ -158,7 +160,7 @@ class TestJSONFormatter:
         assert parsed == {
             "tables": {
                 "data": {
-                    "metadata": {"title": None, "description": None, "present_transposed": False},
+                    "metadata": {"kind": "table", "title": None, "description": None, "present_transposed": False},
                     "columns": [
                         {"key": "name", "label": "Name", "header": False},
                         {"key": "age", "label": "Age", "header": False}
@@ -185,7 +187,7 @@ class TestJSONFormatter:
         assert parsed == {
             "tables": {
                 "data": {
-                    "metadata": {"title": None, "description": None, "present_transposed": False},
+                    "metadata": {"kind": "table", "title": None, "description": None, "present_transposed": False},
                     "columns": [
                         {"key": "name", "label": "Name", "header": False},
                         {"key": "age", "label": "Age", "header": False}
@@ -229,7 +231,7 @@ class TestJSONFormatter:
         assert parsed == {
             "tables": {
                 "data": {
-                    "metadata": {"title": None, "description": None, "present_transposed": False},
+                    "metadata": {"kind": "table", "title": None, "description": None, "present_transposed": False},
                     "columns": [
                         {"key": "internal_name", "label": "Display Name", "header": False},
                         {"key": "internal_age", "label": "Age in Years", "header": False}
@@ -267,7 +269,7 @@ class TestFormatAs:
         assert parsed == {
             "tables": {
                 "data": {
-                    "metadata": {"title": None, "description": None, "present_transposed": False},
+                    "metadata": {"kind": "table", "title": None, "description": None, "present_transposed": False},
                     "columns": [{"key": "x", "label": "X", "header": False}],
                     "rows": [{"x": 1}]
                 }
@@ -391,9 +393,10 @@ class TestJSONFormatterMetadata:
 
         parsed = json.loads(result)
         assert parsed["tables"]["data"]["metadata"] == {
+            "kind": "table",
             "title": None,
             "description": None,
-            "present_transposed": False
+            "present_transposed": False,
         }
 
     def test_json_includes_present_transposed_flag(self):
@@ -698,7 +701,7 @@ class TestFormatterIntegration:
         assert parsed == {
             "tables": {
                 "data": {
-                    "metadata": {"title": None, "description": None, "present_transposed": False},
+                    "metadata": {"kind": "table", "title": None, "description": None, "present_transposed": False},
                     "columns": [
                         {"key": "color_name", "label": "Color Name", "header": False},
                         {"key": "color_hex", "label": "Color Hex", "header": False},
@@ -716,3 +719,205 @@ class TestFormatterIntegration:
                 }
             }
         }
+
+
+# -----------------------------------------------------------------------------
+# TreeContent rendering
+# -----------------------------------------------------------------------------
+
+def _tiny_tree() -> TreeContent:
+    """A small filesystem-shaped tree used by multiple tests."""
+    tree = (
+        TreeContent(title="/usr", description="tiny")
+        .add_column("name", "Name", header=True)
+        .add_column("size", "Size")
+        .add_column("kind", "Kind", importance=Importance.DETAIL)
+    )
+    usr = tree.add_root(name="/usr", size=0, kind="dir")
+    bin_dir = usr.add_child(name="bin", size=4096, kind="dir")
+    bin_dir.add_child(name="ls", size=150_296, kind="exec")
+    bin_dir.add_child(name="cat", size=52_024, kind="exec")
+    lib = usr.add_child(name="lib", size=8192, kind="dir")
+    lib.add_child(name="libc.so", size=2_000_000, kind="lib")
+    return tree
+
+
+class TestTsvTreeRendering:
+    def test_headers_with_comment_prefix(self):
+        result = format_as(Reports(fs=Report(data=_tiny_tree())), "tsv")
+        assert result.splitlines()[0] == "# Name\tSize"
+
+    def test_depth_indent_on_header_column(self):
+        result = format_as(Reports(fs=Report(data=_tiny_tree())), "tsv")
+        lines = result.splitlines()
+        # TSV defaults to ESSENTIAL → 'kind' column (DETAIL) is dropped.
+        assert lines == [
+            "# Name\tSize",
+            "/usr\t0",
+            "  bin\t4096",
+            "    ls\t150296",
+            "    cat\t52024",
+            "  lib\t8192",
+            "    libc.so\t2000000",
+        ]
+
+    def test_detailed_includes_detail_column(self):
+        tree = _tiny_tree()
+        report = Report(data=tree)
+        # Override via explicit DetailLevel on the report
+        from asyoulikeit import DetailLevel
+        report = Report(data=tree, detail_level=DetailLevel.DETAILED)
+        result = format_as(Reports(fs=report), "tsv")
+        lines = result.splitlines()
+        assert lines[0] == "# Name\tSize\tKind"
+        assert "/usr\t0\tdir" in lines
+        assert "  bin\t4096\tdir" in lines
+
+    def test_detail_node_pruned_under_essential(self):
+        tree = TreeContent().add_column("name", "Name", header=True)
+        root = tree.add_root(name="keep")
+        root.add_child(name="essential-child")
+        # A DETAIL node and its descendant should both vanish under --essential
+        detail_child = root.add_child(name="detail-child", _importance=Importance.DETAIL)
+        detail_child.add_child(name="grandchild")
+
+        from asyoulikeit import DetailLevel
+        report = Report(data=tree, detail_level=DetailLevel.ESSENTIAL)
+        result = format_as(Reports(t=report), "tsv")
+        assert "keep" in result
+        assert "essential-child" in result
+        assert "detail-child" not in result
+        assert "grandchild" not in result
+
+    def test_header_flag_off_suppresses_header_row(self):
+        report = Report(data=_tiny_tree(), header=False)
+        result = format_as(Reports(fs=report), "tsv")
+        assert "# Name" not in result
+        assert result.splitlines()[0] == "/usr\t0"
+
+    def test_multiple_roots(self):
+        tree = TreeContent().add_column("name", "Name", header=True)
+        tree.add_root(name="/usr").add_child(name="bin")
+        tree.add_root(name="/home").add_child(name="alice")
+        result = format_as(Reports(fs=Report(data=tree)), "tsv")
+        assert result.splitlines() == [
+            "# Name",
+            "/usr",
+            "  bin",
+            "/home",
+            "  alice",
+        ]
+
+
+class TestJsonTreeRendering:
+    def test_metadata_kind_is_tree(self):
+        result = format_as(Reports(fs=Report(data=_tiny_tree())), "json")
+        parsed = json.loads(result)
+        assert parsed["tables"]["fs"]["metadata"]["kind"] == "tree"
+
+    def test_has_roots_not_rows(self):
+        result = format_as(Reports(fs=Report(data=_tiny_tree())), "json")
+        parsed = json.loads(result)
+        assert "roots" in parsed["tables"]["fs"]
+        assert "rows" not in parsed["tables"]["fs"]
+
+    def test_nested_children_structure(self):
+        result = format_as(Reports(fs=Report(data=_tiny_tree())), "json")
+        parsed = json.loads(result)
+        roots = parsed["tables"]["fs"]["roots"]
+        assert len(roots) == 1
+        usr = roots[0]
+        assert usr["values"]["name"] == "/usr"
+        child_names = [c["values"]["name"] for c in usr["children"]]
+        assert child_names == ["bin", "lib"]
+        # bin → ls, cat
+        bin_node = usr["children"][0]
+        assert [c["values"]["name"] for c in bin_node["children"]] == ["ls", "cat"]
+        # leaves have empty children
+        assert bin_node["children"][0]["children"] == []
+
+    def test_detail_column_and_node_pruning(self):
+        from asyoulikeit import DetailLevel
+        tree = (
+            TreeContent()
+            .add_column("name", "Name", header=True)
+            .add_column("note", "Note", importance=Importance.DETAIL)
+        )
+        root = tree.add_root(name="keep", note="hi")
+        root.add_child(name="essential", note="yes")
+        root.add_child(name="gone", note="bye", _importance=Importance.DETAIL)
+
+        essential = format_as(
+            Reports(t=Report(data=tree, detail_level=DetailLevel.ESSENTIAL)),
+            "json",
+        )
+        parsed = json.loads(essential)
+        cols = [c["key"] for c in parsed["tables"]["t"]["columns"]]
+        assert cols == ["name"]  # note dropped
+        keep = parsed["tables"]["t"]["roots"][0]
+        assert "note" not in keep["values"]
+        child_names = [c["values"]["name"] for c in keep["children"]]
+        assert child_names == ["essential"]  # "gone" pruned
+
+
+class TestDisplayTreeRendering:
+    def _render(self, tree, detail_level=None, header=True):
+        import os
+        os.environ.setdefault("COLUMNS", "80")
+        os.environ.setdefault("NO_COLOR", "1")
+        from asyoulikeit import DetailLevel
+        kwargs = {}
+        if detail_level is not None:
+            kwargs["detail_level"] = detail_level
+        kwargs["header"] = header
+        report = Report(data=tree, **kwargs)
+        return strip_ansi_codes(format_as(Reports(t=report), "display"))
+
+    def test_contains_title_and_caption(self):
+        result = self._render(_tiny_tree())
+        assert "/usr" in result
+        assert "tiny" in result
+
+    def test_ascii_art_connectors_present(self):
+        result = self._render(_tiny_tree())
+        assert "├── bin" in result
+        assert "└── lib" in result
+        assert "│   ├── ls" in result or "├── ls" in result  # depending on layout
+        assert "    └── libc.so" in result or "└── libc.so" in result
+
+    def test_header_flag_off_hides_title_and_column_labels(self):
+        result = self._render(_tiny_tree(), header=False)
+        # title suppressed
+        normalized = normalize_whitespace(result)
+        assert "tiny" not in normalized
+        # The header row (column labels like 'Name' | 'Size') is suppressed,
+        # but the VALUE '/usr' still appears — it's data, not a header.
+        assert "/usr" in result
+
+    def test_detail_node_pruning(self):
+        tree = TreeContent().add_column("name", "Name", header=True)
+        tree.add_root(name="keep").add_child(
+            name="hidden", _importance=Importance.DETAIL
+        )
+        from asyoulikeit import DetailLevel
+        result = self._render(tree, detail_level=DetailLevel.ESSENTIAL)
+        assert "keep" in result
+        assert "hidden" not in result
+
+
+class TestFormatterRejectsUnknownContent:
+    """Each formatter should raise a clear TypeError for unknown content."""
+
+    def test_all_formatters_reject_custom_content(self):
+        from asyoulikeit import ReportContent
+
+        class WidgetContent(ReportContent):
+            @classmethod
+            def kind(cls) -> str:
+                return "widget"
+
+        report = Report(data=WidgetContent())
+
+        for fmt in ("tsv", "json", "display"):
+            with pytest.raises(TypeError, match=r"kind='widget'"):
+                format_as(Reports(w=report), fmt)

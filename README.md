@@ -91,6 +91,7 @@ Catherine Parr	1512	Survived
   "tables": {
     "wives": {
       "metadata": {
+        "kind": "table",
         "title": "Wives of Henry VIII",
         "description": "Divorced, beheaded, died; divorced, beheaded, survived.",
         "present_transposed": false

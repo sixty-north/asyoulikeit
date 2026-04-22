@@ -77,8 +77,17 @@ that were declared — missing keys and unexpected keys both raise
 holds optional ``title`` and ``description`` metadata that some
 formatters display.
 
-:class:`~asyoulikeit.Report` is a frozen dataclass wrapping a
-``TableContent`` plus formatting preferences (``detail_level``,
+:class:`~asyoulikeit.TreeContent` is the hierarchical sibling — a
+forest of nodes sharing a single column schema. See :ref:`tree-content`
+below.
+
+Both ``TableContent`` and ``TreeContent`` are implementations of
+:class:`~asyoulikeit.ReportContent`. Future shapes (heterogeneous
+trees, lists, description lists, …) will slot in as further subclasses
+without changing the rest of the API.
+
+:class:`~asyoulikeit.Report` is a frozen dataclass wrapping one piece
+of ``ReportContent`` plus formatting preferences (``detail_level``,
 ``header``). These preferences are *suggestions* — the user can
 override them from the command line.
 
@@ -136,6 +145,70 @@ silent by default — useful for action commands that should produce no
 visible output unless the user asks for a specific report. Use
 ``@report_output(default_reports=["users"])`` to show only a
 specific subset by default.
+
+
+.. _tree-content:
+
+Tree content
+------------
+
+When your data is hierarchical — a filesystem subtree, an organisation
+chart, a syntax tree — return :class:`~asyoulikeit.TreeContent` from
+your handler instead of ``TableContent``. The API is deliberately
+parallel: you declare a column schema just like for a table, but every
+*node* in the tree carries values matching that schema (homogeneous
+columns across all nodes) and nodes form a parent/child hierarchy
+instead of a flat list.
+
+.. code-block:: python
+
+   from asyoulikeit import (
+       Importance, Report, Reports, TreeContent, report_output,
+   )
+
+   @click.command()
+   @report_output
+   def list_usr():
+       tree = (
+           TreeContent(title="/usr")
+           .add_column("name", "Name", header=True)
+           .add_column("size", "Size")
+           .add_column("kind", "Kind", importance=Importance.DETAIL)
+       )
+       usr = tree.add_root(name="/usr", size=0, kind="dir")
+       bin_dir = usr.add_child(name="bin", size=4096, kind="dir")
+       bin_dir.add_child(name="ls", size=150_296, kind="exec")
+       bin_dir.add_child(name="cat", size=52_024, kind="exec")
+       return Reports(fs=Report(data=tree))
+
+Key differences from ``TableContent``:
+
+* **Exactly one column must be marked** ``header=True``. Trees always
+  need a label for each node; that label is what the display formatter
+  draws alongside the ASCII-art connectors.
+* **``add_root`` is repeatable**. Call it once for a single tree, many
+  times to build a forest — useful when listing several independent
+  top-level items.
+* **``Node.add_child(...)`` returns the new child**, so you descend by
+  keeping a reference to each level you need. Siblings come from
+  calling ``add_child`` on the shared parent again.
+* **Per-node** :class:`~asyoulikeit.Importance` **tagging prunes whole
+  subtrees**. A node marked ``DETAIL`` and *all its descendants* drop
+  out under ``--essential``, because you cannot show a child while
+  hiding its parent.
+
+The three built-in formatters each render trees in the way best suited
+to their audience:
+
+* ``display`` lays ASCII-art connectors (``├──``, ``└──``, ``│``) into
+  the first column of a Rich table, with the other columns lining up
+  as usual.
+* ``tsv`` flattens the tree in pre-order and indents the header-column
+  value two spaces per level of depth, preserving tab separation so
+  downstream tools still parse cleanly.
+* ``json`` emits a nested ``{"values": {...}, "children": [...]}``
+  structure under a ``"roots"`` list, with ``metadata.kind = "tree"``
+  distinguishing it from table-shaped output.
 
 
 Transposition
