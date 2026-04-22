@@ -81,13 +81,13 @@ class TestFormatSelection:
         people_rows = parsed["tables"]["people"]["rows"]
         assert {r["name"] for r in people_rows} == {"Alice", "Bob"}
 
-    def test_as_table_renders(self):
+    def test_as_display_renders(self):
         @click.command()
         @tabulated_output
         def cmd():
             return _make_people_reports()
 
-        result = CliRunner().invoke(cmd, ["--as", "table"])
+        result = CliRunner().invoke(cmd, ["--as", "display"])
         assert result.exit_code == 0
         assert "Alice" in result.output
         assert "red" in result.output
@@ -108,13 +108,13 @@ class TestSmartDefaultFormat:
         assert result.exit_code == 0
         assert result.output.startswith("# X\n1")
 
-    def test_default_is_table_when_a_tty(self, monkeypatch):
-        """Forcing isatty() True should flip the default to 'table'."""
+    def test_default_is_display_when_a_tty(self, monkeypatch):
+        """Forcing isatty() True should flip the default to 'display'."""
         import types
 
         # CliRunner swaps sys.stdout during invoke, so monkeypatching the real
         # sys.stdout has no effect inside the command. Instead, rebind the
-        # `sys` name inside aspects.cli.output to a fake whose stdout.isatty()
+        # `sys` name inside aspects.cli to a fake whose stdout.isatty()
         # returns True — the smart-default callback reads that reference.
         fake_sys = types.SimpleNamespace(
             stdout=types.SimpleNamespace(isatty=lambda: True)
@@ -130,7 +130,7 @@ class TestSmartDefaultFormat:
         result = CliRunner().invoke(cmd, [])
         assert result.exit_code == 0
         assert "X" in result.output
-        # A leading "# X" is the TSV signature; table output never produces it.
+        # A leading "# X" is the TSV signature; display output never produces it.
         assert not result.output.startswith("# X")
 
 

@@ -1,4 +1,11 @@
-"""Rich table formatter."""
+"""Human-oriented display formatter.
+
+Where ``json`` is structured output for machines and ``tsv`` is tabular output
+for machines, ``display`` is presentation for humans: borders, colors, bold
+and italic typography. The current implementation uses the Rich library to
+render tabular data; when other report shapes (trees, lists) land, this
+formatter's responsibility is to present them for human consumption.
+"""
 
 from io import StringIO
 
@@ -18,8 +25,8 @@ from aspects.tabular_data import (
 )
 
 
-class TableFormatter(Formatter):
-    """Rich table formatter for beautiful terminal output.
+class DisplayFormatter(Formatter):
+    """Human-oriented presentation formatter.
 
     Outputs data as formatted tables with borders and styling using the Rich
     library. Supports titles, descriptions, header columns, and transposed

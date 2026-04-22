@@ -90,7 +90,7 @@ def formatter_names() -> list[str]:
     """Get the names of all available formatters.
 
     Returns:
-        List of formatter names (e.g., ["json", "table", "tsv"])
+        List of formatter names (e.g., ["display", "json", "tsv"])
     """
     return list_extensions(FORMATTER_NAMESPACE)
 
@@ -128,7 +128,7 @@ def format_as(
         reports: A Reports object containing one or more named reports.
             Each report contains its own data, styles, and formatting preferences
             that may have been adjusted by CLI flags.
-        format_name: Name of the format (e.g., "tsv", "json", "table")
+        format_name: Name of the format (e.g., "tsv", "json", "display")
 
     Returns:
         Formatted string

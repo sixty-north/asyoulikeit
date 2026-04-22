@@ -4,7 +4,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Package purpose
 
-`aspects` packages up a CLI report-rendering stack extracted from `demonstrable-visning`: a `Report`/`Reports` data model, a stevedore-based `Formatter` plug-in system with three built-in formatters (`table`, `tsv`, `json`), and a `@tabulated_output` Click decorator that turns a handler returning `Reports` into a command with `--as / --report / --header / --detailed` options. The same stevedore plug-in pattern has been copy-pasted into several sixty-north packages; the long-term intent is for those packages to depend on `aspects` instead. Python 3.11+.
+`aspects` packages up a CLI report-rendering stack extracted from `demonstrable-visning`: a `Report`/`Reports` data model, a stevedore-based `Formatter` plug-in system with three built-in formatters, and a `@tabulated_output` Click decorator that turns a handler returning `Reports` into a command with `--as / --report / --header / --detailed` options. The same stevedore plug-in pattern has been copy-pasted into several sixty-north packages; the long-term intent is for those packages to depend on `aspects` instead. Python 3.11+.
+
+The three built-in formatters form a symmetric mental model — keep this framing in mind when adding new formatters or extending existing ones:
+
+- `json` → structured output for machines
+- `tsv`  → tabular output for machines
+- `display` → presentation for humans (borders, colors, bold/italic; currently implemented with Rich, but the name is shape-agnostic so it can cover trees or lists when those report kinds are added)
 
 ## Commands
 
@@ -32,7 +38,7 @@ aspects.cli.output.tabulated_output wrapper
 aspects.formatter.format_as(reports, format_name)
    │
    ▼  stevedore lookup in "aspects.formatter" namespace
-<name>.Formatter (= concrete TableFormatter / TsvFormatter / JsonFormatter).format(reports) -> str
+<name>.Formatter (= concrete DisplayFormatter / TsvFormatter / JsonFormatter).format(reports) -> str
    │
    ▼
 click.echo(output)
@@ -46,14 +52,14 @@ Client-facing objects (`tabulated_output`, `Report`, `Reports`, `TabularData`, `
 
 Built-in formatters live under `src/aspects/ext/formatters/<name>/`. Each sub-package has two files:
 
-- `formatter.py` defines a concrete class with a specific name (`TableFormatter`, `TsvFormatter`, `JsonFormatter`).
-- `__init__.py` does `from .formatter import TableFormatter as Formatter` — re-exporting the concrete class under the uniform symbol `Formatter`.
+- `formatter.py` defines a concrete class with a specific name (`DisplayFormatter`, `TsvFormatter`, `JsonFormatter`).
+- `__init__.py` does `from .formatter import DisplayFormatter as Formatter` — re-exporting the concrete class under the uniform symbol `Formatter`.
 
 The entry point in `pyproject.toml` then always references `<pkg>:Formatter`:
 
 ```toml
 [project.entry-points."aspects.formatter"]
-table = "aspects.ext.formatters.table:Formatter"
+display = "aspects.ext.formatters.display:Formatter"
 ```
 
 This keeps the entry-point target stable while letting the concrete class name stay descriptive. The `ext/` prefix is a cross-project sixty-north convention — keep it; do not flatten. The same layout should be used for any future kinds of extensions beyond formatters.
@@ -66,13 +72,13 @@ Three knobs interact and it's easy to get lost:
 2. **Per-row `Importance`** — passed as the reserved `_importance` kwarg on `add_row`.
 3. **Per-`Report` `DetailLevel`** (`AUTO` / `DETAILED` / `ESSENTIAL`) — the formatting preference the report *suggests*.
 
-Each formatter resolves `DetailLevel.AUTO` to its own default: `table` and `json` choose `DETAILED`, `tsv` chooses `ESSENTIAL` (since TSV is meant for downstream pipes). `--detailed`/`--essential` on the CLI override the report's preference via `dataclasses.replace` before dispatch.
+Each formatter resolves `DetailLevel.AUTO` to its own default: `display` and `json` choose `DETAILED`, `tsv` chooses `ESSENTIAL` (since TSV is meant for downstream pipes). `--detailed`/`--essential` on the CLI override the report's preference via `dataclasses.replace` before dispatch.
 
-Header behaviour is format-specific: TSV prefixes the first header cell with `# ` (so downstream `awk`/`cut` can skip it as a comment); table omits title/caption when `header=False`; JSON always includes metadata (self-describing).
+Header behaviour is format-specific: TSV prefixes the first header cell with `# ` (so downstream `awk`/`cut` can skip it as a comment); display omits title/caption when `header=False`; JSON always includes metadata (self-describing).
 
 ### Smart `--as` default and testing it
 
-`tabulated_output` injects `--as` with a callback that reads `sys.stdout.isatty()` at invocation time: `table` when interactive, `tsv` when piped. When writing a test that needs to exercise the TTY branch, note that `click.testing.CliRunner` swaps `sys.stdout` inside `invoke()`, so monkeypatching the real `sys.stdout.isatty` has no effect. Instead, rebind the `sys` name inside the decorator module:
+`tabulated_output` injects `--as` with a callback that reads `sys.stdout.isatty()` at invocation time: `display` when interactive, `tsv` when piped. When writing a test that needs to exercise the TTY branch, note that `click.testing.CliRunner` swaps `sys.stdout` inside `invoke()`, so monkeypatching the real `sys.stdout.isatty` has no effect. Instead, rebind the `sys` name inside the decorator module:
 
 ```python
 import types

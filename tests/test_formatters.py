@@ -285,7 +285,7 @@ class TestFormatAs:
         """Error message should list available formats."""
         data = TabularData().add_column("x", "X")
 
-        with pytest.raises(FormatterExtensionError, match="Available: json, table, tsv"):
+        with pytest.raises(FormatterExtensionError, match="Available: display, json, tsv"):
             format_as(Reports(data=Report(data=data)), "xml")
 
 
@@ -447,13 +447,13 @@ class TestJSONFormatterMetadata:
         assert parsed["tables"]["data"]["metadata"]["present_transposed"] is True
 
 
-class TestTableFormatter:
-    """Tests for Rich table formatter."""
+class TestDisplayFormatter:
+    """Tests for the display (human-presentation) formatter."""
 
     def test_empty_table(self):
-        """Table formatter should handle empty tables."""
+        """Display formatter should handle empty tables."""
         data = TabularData().add_column("name", "Name")
-        formatter = create_formatter("table")
+        formatter = create_formatter("display")
         result = formatter.format(Reports(data=Report(data=data)))
 
         # Should return a non-empty string
@@ -463,14 +463,14 @@ class TestTableFormatter:
         assert "Name" in result
 
     def test_single_column_single_row(self):
-        """Table formatter should handle single column, single row."""
+        """Display formatter should handle single column, single row."""
         data = (
             TabularData()
             .add_column("name", "Name")
             .add_row(name="Alice")
         )
 
-        formatter = create_formatter("table")
+        formatter = create_formatter("display")
         result = formatter.format(Reports(data=Report(data=data)))
 
         assert isinstance(result, str)
@@ -478,7 +478,7 @@ class TestTableFormatter:
         assert "Alice" in result
 
     def test_multiple_columns_and_rows(self):
-        """Table formatter should handle multiple columns and rows."""
+        """Display formatter should handle multiple columns and rows."""
         data = (
             TabularData()
             .add_column("name", "Name")
@@ -487,7 +487,7 @@ class TestTableFormatter:
             .add_row(name="Bob", age=25)
         )
 
-        formatter = create_formatter("table")
+        formatter = create_formatter("display")
         result = formatter.format(Reports(data=Report(data=data)))
 
         assert isinstance(result, str)
@@ -498,51 +498,51 @@ class TestTableFormatter:
         assert "30" in result
         assert "25" in result
 
-    def test_table_with_title(self):
-        """Table formatter should include title."""
+    def test_display_with_title(self):
+        """Display formatter should include title."""
         data = (
             TabularData(title="User Report")
             .add_column("name", "Name")
             .add_row(name="Alice")
         )
 
-        formatter = create_formatter("table")
+        formatter = create_formatter("display")
         result = formatter.format(Reports(data=Report(data=data)))
         result_normalized = normalize_whitespace(result)
 
         assert "User Report" in result_normalized
 
-    def test_table_with_description(self):
-        """Table formatter should include description as caption."""
+    def test_display_with_description(self):
+        """Display formatter should include description as caption."""
         data = (
             TabularData(description="Active users")
             .add_column("name", "Name")
             .add_row(name="Alice")
         )
 
-        formatter = create_formatter("table")
+        formatter = create_formatter("display")
         result = formatter.format(Reports(data=Report(data=data)))
         result_normalized = normalize_whitespace(result)
 
         assert "Active users" in result_normalized
 
-    def test_table_with_title_and_description(self):
-        """Table formatter should include both title and description."""
+    def test_display_with_title_and_description(self):
+        """Display formatter should include both title and description."""
         data = (
             TabularData(title="User Report", description="Active users in the system")
             .add_column("name", "Name")
             .add_row(name="Alice")
         )
 
-        formatter = create_formatter("table")
+        formatter = create_formatter("display")
         result = formatter.format(Reports(data=Report(data=data)))
         result_normalized = normalize_whitespace(result)
 
         assert "User Report" in result_normalized
         assert "Active users in the system" in result_normalized
 
-    def test_table_with_header_column(self):
-        """Table formatter should style header column."""
+    def test_display_with_header_column(self):
+        """Display formatter should style header column."""
         data = (
             TabularData()
             .add_column("category", "Category", header=True)
@@ -550,7 +550,7 @@ class TestTableFormatter:
             .add_row(category="Apples", value=10)
         )
 
-        formatter = create_formatter("table")
+        formatter = create_formatter("display")
         result = formatter.format(Reports(data=Report(data=data)))
 
         assert "Category" in result
@@ -558,8 +558,8 @@ class TestTableFormatter:
         assert "Apples" in result
         assert "10" in result
 
-    def test_table_transposed_with_header_column(self):
-        """Table formatter should transpose with header column values as headers."""
+    def test_display_transposed_with_header_column(self):
+        """Display formatter should transpose with header column values as headers."""
         data = (
             TabularData(present_transposed=True)
             .add_column("category", "Category", header=True)
@@ -569,7 +569,7 @@ class TestTableFormatter:
             .add_row(category="Price", apples=1.50, oranges=2.00)
         )
 
-        formatter = create_formatter("table")
+        formatter = create_formatter("display")
         result = formatter.format(Reports(data=Report(data=data)))
 
         # Header column label and values should be present
@@ -583,8 +583,8 @@ class TestTableFormatter:
         assert "10" in result
         assert "15" in result
 
-    def test_table_transposed_without_header_column(self):
-        """Table formatter should transpose using row indices when no header column."""
+    def test_display_transposed_without_header_column(self):
+        """Display formatter should transpose using row indices when no header column."""
         data = (
             TabularData(present_transposed=True)
             .add_column("name", "Name")
@@ -593,7 +593,7 @@ class TestTableFormatter:
             .add_row(name="Bob", age=25)
         )
 
-        formatter = create_formatter("table")
+        formatter = create_formatter("display")
         result = formatter.format(Reports(data=Report(data=data)))
 
         # Row indices should appear as column headers
@@ -608,8 +608,8 @@ class TestTableFormatter:
         assert "30" in result
         assert "25" in result
 
-    def test_table_quarterly_metrics(self):
-        """Table formatter should handle quarterly metrics beautifully."""
+    def test_display_quarterly_metrics(self):
+        """Display formatter should handle quarterly metrics beautifully."""
         data = (
             TabularData(
                 title="Quarterly Metrics",
@@ -623,7 +623,7 @@ class TestTableFormatter:
             .add_row(metric="Profit", q1=20000, q2=25000)
         )
 
-        formatter = create_formatter("table")
+        formatter = create_formatter("display")
         result = formatter.format(Reports(data=Report(data=data)))
         result_normalized = normalize_whitespace(result)
 

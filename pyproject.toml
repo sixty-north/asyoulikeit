@@ -15,7 +15,7 @@ dependencies = [
 ]
 
 [project.entry-points."aspects.formatter"]
-table = "aspects.ext.formatters.table:Formatter"
+display = "aspects.ext.formatters.display:Formatter"
 tsv = "aspects.ext.formatters.tsv:Formatter"
 json = "aspects.ext.formatters.json:Formatter"
 

@@ -2,7 +2,7 @@
 
 Provides the :func:`tabulated_output` decorator for commands that produce
 formatted report output with support for multiple reports, format selection
-(table/TSV/JSON), and column filtering.
+(display/TSV/JSON), and column filtering.
 """
 
 import functools
@@ -71,7 +71,7 @@ def tabulated_output(
             - Iterable[str]: Show only these named reports by default
 
     Adds these CLI options:
-    - --as: Selects the output format (table, tsv, json)
+    - --as: Selects the output format (display, tsv, json)
     - --detailed/--essential: Controls which columns are included (overrides report defaults)
     - --header/--no-header: Controls whether headers are emitted (overrides report defaults)
     - --report: Filters which reports to display (can be specified multiple times)
@@ -79,7 +79,7 @@ def tabulated_output(
     The --as option defaults intelligently based on TTY detection.
     The detail level defaults to AUTO, allowing each formatter to decide its default behavior.
     Header behavior is format-specific: TSV prefixes first header cell with "#",
-    table omits headers/title/caption, JSON ignores the flag.
+    display omits headers/title/caption, JSON ignores the flag.
 
     Examples:
         @tabulated_output  # Show all reports (reporting command)
@@ -106,7 +106,7 @@ def tabulated_output(
         """Set default based on TTY detection if user didn't specify --as."""
         if value is None:
             # User didn't specify --as, use smart default based on TTY
-            return "table" if sys.stdout.isatty() else "tsv"
+            return "display" if sys.stdout.isatty() else "tsv"
         return value
 
     def map_detail_level(ctx, param, value):
@@ -130,7 +130,7 @@ def tabulated_output(
             default=None,  # None means use report's default
             help="Include column headers in output. Overrides each report's default. "
                  "Format-specific: TSV prefixes first cell with '#', "
-                 "table omits headers/title/caption, JSON ignores this flag.",
+                 "display omits headers/title/caption, JSON ignores this flag.",
         )(
             TABULATED_OUTPUT_GROUP.option(
                 "--detailed/--essential",
@@ -146,7 +146,7 @@ def tabulated_output(
                     type=click.Choice(formatter_names(), case_sensitive=False),
                     default=None,
                     callback=set_smart_default,
-                    help="Output format for tabular data. Defaults to 'table' for terminals, 'tsv' for pipes.",
+                    help="Output format for tabular data. Defaults to 'display' for terminals, 'tsv' for pipes.",
                 )(func)
             )
         )
