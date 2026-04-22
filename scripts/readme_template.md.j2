@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="https://raw.githubusercontent.com/sixty-north/asyoulikeit/master/docs/_static/logo.svg" alt="asyoulikeit" width="200">
+</p>
+
 # asyoulikeit
 
 > `--as tsv | json | display` → *as you like it*
