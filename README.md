@@ -69,7 +69,7 @@ if __name__ == "__main__":
 
 Thus decorated are options imparted unto thy command: `--as` (which format thou shalt have), `--report` (which reports shall be shown), `--header` / `--no-header` (shall column headings appear?), and `--detailed` / `--essential` (how copious thy detail?). When `--as` is withheld, judgement is passed wisely: to a terminal is given `display`; to a pipe, `tsv`.
 
-### Scene I — `--as tsv`, for the devices of UNIX
+### Scene I   `--as tsv`,   for the devices of UNIX
 
 ```
 # Name	Born	Fate
@@ -81,7 +81,7 @@ Catherine Howard	1523	Beheaded
 Catherine Parr	1512	Survived
 ```
 
-### Scene II — `--as json`, for the contrivances of the web
+### Scene II   `--as json`,   for the contrivances of the web
 
 ```json
 {
@@ -157,7 +157,7 @@ Catherine Parr	1512	Survived
 }
 ```
 
-### Scene III — `--as display`, for thine own eye
+### Scene III   `--as display`,   for thine own eye
 
 ```
                  Wives of Henry VIII                 
