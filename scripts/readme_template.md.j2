@@ -18,19 +18,19 @@ Take thou a handler that returneth a `Reports` object, and with `@tabulated_outp
 
 The decorator doth impart these options unto thy command: `--as` (which format thou shalt have), `--report` (which reports shall be shown), `--header` / `--no-header` (shall column headings appear?), and `--detailed` / `--essential` (how copious thy detail?). When `--as` is withheld, the decorator judgeth wisely: to a terminal it giveth `display`; to a pipe, `tsv`.
 
-### Scene I — rendered `--as tsv`, for the devices of UNIX
+### Scene I — `--as tsv`, for the devices of UNIX
 
 ```
 {{ example.outputs.tsv }}
 ```
 
-### Scene II — rendered `--as json`, for the contrivances of the web
+### Scene II — `--as json`, for the contrivances of the web
 
 ```json
 {{ example.outputs.json }}
 ```
 
-### Scene III — rendered `--as display`, for thine own eye
+### Scene III — `--as display`, for thine own eye
 
 ```
 {{ example.outputs.display }}
