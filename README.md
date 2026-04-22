@@ -6,7 +6,7 @@
 
 > `--as tsv | json | display` → *as you like it*
 
-Gentle reader, this library doth furnish thy Python command-line tools with reports most manifold: to the machine in ordered JSON, to the pipe in honest TSV, and to the mortal eye in fair display — every format, verily, **as thou likest it**.
+Gentle reader, this library doth furnish thy Python command-line tools with reports most manifold: to the machine in ordered JSON, to the pipe in honest TSV, and to thine own eye in fair display — every format, verily, **as thou likest it**.
 
 ## Prologue — a Quickstart
 
@@ -133,7 +133,7 @@ Go	2009	Imperative
 }
 ```
 
-### Scene III — rendered `--as display`, for mortal eyes
+### Scene III — rendered `--as display`, for thine own eye
 
 ```
                  Programming languages                  
