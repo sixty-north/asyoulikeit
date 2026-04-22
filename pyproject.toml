@@ -8,7 +8,7 @@ dynamic = ["version"]
 authors = [
     { name = "Robert Smallshire", email = "systems+asyoulikeit@sixty-north.com" },
 ]
-description = "Configurable CLI report asyoulikeit for Python projects."
+description = "Multi-format report output for Python command-line tools."
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]
