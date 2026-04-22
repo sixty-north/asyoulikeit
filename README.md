@@ -32,6 +32,7 @@ into the README.
 import click
 
 from asyoulikeit import (
+    Importance,
     Report,
     Reports,
     TabularData,
@@ -51,12 +52,13 @@ def list_wives():
         .add_column("name", "Name")
         .add_column("born", "Born")
         .add_column("fate", "Fate")
-        .add_row(name="Catherine of Aragon", born=1485, fate="Divorced")
-        .add_row(name="Anne Boleyn", born=1501, fate="Beheaded")
-        .add_row(name="Jane Seymour", born=1508, fate="Died")
-        .add_row(name="Anne of Cleves", born=1515, fate="Divorced")
-        .add_row(name="Catherine Howard", born=1523, fate="Beheaded")
-        .add_row(name="Catherine Parr", born=1512, fate="Survived")
+        .add_column("queenship", "Queenship", importance=Importance.DETAIL)
+        .add_row(name="Catherine of Aragon", born=1485, fate="Divorced", queenship="1509–1533")
+        .add_row(name="Anne Boleyn", born=1501, fate="Beheaded", queenship="1533–1536")
+        .add_row(name="Jane Seymour", born=1508, fate="Died", queenship="1536–1537")
+        .add_row(name="Anne of Cleves", born=1515, fate="Divorced", queenship="1540")
+        .add_row(name="Catherine Howard", born=1523, fate="Beheaded", queenship="1540–1542")
+        .add_row(name="Catherine Parr", born=1512, fate="Survived", queenship="1543–1547")
     )
     return Reports(wives=Report(data=data))
 
@@ -105,38 +107,49 @@ Catherine Parr	1512	Survived
           "key": "fate",
           "label": "Fate",
           "header": false
+        },
+        {
+          "key": "queenship",
+          "label": "Queenship",
+          "header": false
         }
       ],
       "rows": [
         {
           "name": "Catherine of Aragon",
           "born": 1485,
-          "fate": "Divorced"
+          "fate": "Divorced",
+          "queenship": "1509\u20131533"
         },
         {
           "name": "Anne Boleyn",
           "born": 1501,
-          "fate": "Beheaded"
+          "fate": "Beheaded",
+          "queenship": "1533\u20131536"
         },
         {
           "name": "Jane Seymour",
           "born": 1508,
-          "fate": "Died"
+          "fate": "Died",
+          "queenship": "1536\u20131537"
         },
         {
           "name": "Anne of Cleves",
           "born": 1515,
-          "fate": "Divorced"
+          "fate": "Divorced",
+          "queenship": "1540"
         },
         {
           "name": "Catherine Howard",
           "born": 1523,
-          "fate": "Beheaded"
+          "fate": "Beheaded",
+          "queenship": "1540\u20131542"
         },
         {
           "name": "Catherine Parr",
           "born": 1512,
-          "fate": "Survived"
+          "fate": "Survived",
+          "queenship": "1543\u20131547"
         }
       ]
     }
@@ -147,19 +160,19 @@ Catherine Parr	1512	Survived
 ### Scene III — rendered `--as display`, for thine own eye
 
 ```
-           Wives of Henry VIII           
-┏━━━━━━━━━━━━━━━━━━━━━┳━━━━━━┳━━━━━━━━━━┓
-┃ Name                ┃ Born ┃ Fate     ┃
-┡━━━━━━━━━━━━━━━━━━━━━╇━━━━━━╇━━━━━━━━━━┩
-│ Catherine of Aragon │ 1485 │ Divorced │
-│ Anne Boleyn         │ 1501 │ Beheaded │
-│ Jane Seymour        │ 1508 │ Died     │
-│ Anne of Cleves      │ 1515 │ Divorced │
-│ Catherine Howard    │ 1523 │ Beheaded │
-│ Catherine Parr      │ 1512 │ Survived │
-└─────────────────────┴──────┴──────────┘
-   Divorced, beheaded, died; divorced,   
-           beheaded, survived.
+                 Wives of Henry VIII                 
+┏━━━━━━━━━━━━━━━━━━━━━┳━━━━━━┳━━━━━━━━━━┳━━━━━━━━━━━┓
+┃ Name                ┃ Born ┃ Fate     ┃ Queenship ┃
+┡━━━━━━━━━━━━━━━━━━━━━╇━━━━━━╇━━━━━━━━━━╇━━━━━━━━━━━┩
+│ Catherine of Aragon │ 1485 │ Divorced │ 1509–1533 │
+│ Anne Boleyn         │ 1501 │ Beheaded │ 1533–1536 │
+│ Jane Seymour        │ 1508 │ Died     │ 1536–1537 │
+│ Anne of Cleves      │ 1515 │ Divorced │ 1540      │
+│ Catherine Howard    │ 1523 │ Beheaded │ 1540–1542 │
+│ Catherine Parr      │ 1512 │ Survived │ 1543–1547 │
+└─────────────────────┴──────┴──────────┴───────────┘
+    Divorced, beheaded, died; divorced, beheaded,    
+                      survived.
 ```
 
 ## Of the Licence
