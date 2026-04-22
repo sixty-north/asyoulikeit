@@ -15,16 +15,32 @@ Top-level package
    :exclude-members: ALL_REPORTS
 
 
-Data model
-----------
+Report content: the base
+------------------------
+
+.. automodule:: asyoulikeit.content
+   :members:
+   :show-inheritance:
+
+
+Table content
+-------------
 
 .. automodule:: asyoulikeit.tabular_data
    :members:
    :show-inheritance:
 
 
-The tabulated-output decorator
-------------------------------
+Tree content
+------------
+
+.. automodule:: asyoulikeit.tree_data
+   :members:
+   :show-inheritance:
+
+
+The report-output decorator
+---------------------------
 
 .. automodule:: asyoulikeit.cli
    :members:

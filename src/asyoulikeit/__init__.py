@@ -27,6 +27,7 @@ from asyoulikeit.tabular_data import (
     Reports,
     TableContent,
 )
+from asyoulikeit.tree_data import Node, TreeContent
 
 __all__ = [
     "ALL_REPORTS",
@@ -38,6 +39,7 @@ __all__ = [
     "Formatter",
     "FormatterExtensionError",
     "Importance",
+    "Node",
     "Report",
     "ReportContent",
     "Reports",
@@ -48,6 +50,7 @@ __all__ = [
     "STYLE_ITALIC",
     "STYLE_WIDTH",
     "TableContent",
+    "TreeContent",
     "create_formatter",
     "format_as",
     "formatter_names",
