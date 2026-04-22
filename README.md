@@ -13,7 +13,7 @@ Gentle reader, this library doth furnish thy terminal tools with reports most ma
 Take thou a handler that returneth a `Reports` object, and with `@tabulated_output` do thou dress it thus:
 
 ```python
-"""Quickstart example: list a handful of programming languages as a Report.
+"""Quickstart example: list the six wives of Henry VIII as a Report.
 
 Run this file directly to see the default display format:
 
@@ -32,7 +32,6 @@ into the README.
 import click
 
 from asyoulikeit import (
-    Importance,
     Report,
     Reports,
     TabularData,
@@ -42,26 +41,28 @@ from asyoulikeit import (
 
 @click.command()
 @tabulated_output
-def list_languages():
-    """List some well-known programming languages."""
+def list_wives():
+    """List the six wives of Henry VIII."""
     data = (
         TabularData(
-            title="Programming languages",
-            description="A small sample of notable programming languages.",
+            title="Wives of Henry VIII",
+            description="Divorced, beheaded, died; divorced, beheaded, survived.",
         )
         .add_column("name", "Name")
-        .add_column("year", "Year")
-        .add_column("paradigm", "Paradigm")
-        .add_column("typing", "Typing", importance=Importance.DETAIL)
-        .add_row(name="Python", year=1991, paradigm="Multi-paradigm", typing="Dynamic, duck")
-        .add_row(name="Haskell", year=1990, paradigm="Functional", typing="Static, inferred")
-        .add_row(name="Go", year=2009, paradigm="Imperative", typing="Static, structural")
+        .add_column("born", "Born")
+        .add_column("fate", "Fate")
+        .add_row(name="Catherine of Aragon", born=1485, fate="Divorced")
+        .add_row(name="Anne Boleyn", born=1501, fate="Beheaded")
+        .add_row(name="Jane Seymour", born=1508, fate="Died")
+        .add_row(name="Anne of Cleves", born=1515, fate="Divorced")
+        .add_row(name="Catherine Howard", born=1523, fate="Beheaded")
+        .add_row(name="Catherine Parr", born=1512, fate="Survived")
     )
-    return Reports(languages=Report(data=data))
+    return Reports(wives=Report(data=data))
 
 
 if __name__ == "__main__":
-    list_languages()
+    list_wives()
 ```
 
 The decorator doth impart these options unto thy command: `--as` (which format thou shalt have), `--report` (which reports shall be shown), `--header` / `--no-header` (shall column headings appear?), and `--detailed` / `--essential` (how copious thy detail?). When `--as` is withheld, the decorator judgeth wisely: to a terminal it giveth `display`; to a pipe, `tsv`.
@@ -69,10 +70,13 @@ The decorator doth impart these options unto thy command: `--as` (which format t
 ### Scene I — rendered `--as tsv`, for the machines of UNIX
 
 ```
-# Name	Year	Paradigm
-Python	1991	Multi-paradigm
-Haskell	1990	Functional
-Go	2009	Imperative
+# Name	Born	Fate
+Catherine of Aragon	1485	Divorced
+Anne Boleyn	1501	Beheaded
+Jane Seymour	1508	Died
+Anne of Cleves	1515	Divorced
+Catherine Howard	1523	Beheaded
+Catherine Parr	1512	Survived
 ```
 
 ### Scene II — rendered `--as json`, for the machines of the web
@@ -80,10 +84,10 @@ Go	2009	Imperative
 ```json
 {
   "tables": {
-    "languages": {
+    "wives": {
       "metadata": {
-        "title": "Programming languages",
-        "description": "A small sample of notable programming languages.",
+        "title": "Wives of Henry VIII",
+        "description": "Divorced, beheaded, died; divorced, beheaded, survived.",
         "present_transposed": false
       },
       "columns": [
@@ -93,39 +97,46 @@ Go	2009	Imperative
           "header": false
         },
         {
-          "key": "year",
-          "label": "Year",
+          "key": "born",
+          "label": "Born",
           "header": false
         },
         {
-          "key": "paradigm",
-          "label": "Paradigm",
-          "header": false
-        },
-        {
-          "key": "typing",
-          "label": "Typing",
+          "key": "fate",
+          "label": "Fate",
           "header": false
         }
       ],
       "rows": [
         {
-          "name": "Python",
-          "year": 1991,
-          "paradigm": "Multi-paradigm",
-          "typing": "Dynamic, duck"
+          "name": "Catherine of Aragon",
+          "born": 1485,
+          "fate": "Divorced"
         },
         {
-          "name": "Haskell",
-          "year": 1990,
-          "paradigm": "Functional",
-          "typing": "Static, inferred"
+          "name": "Anne Boleyn",
+          "born": 1501,
+          "fate": "Beheaded"
         },
         {
-          "name": "Go",
-          "year": 2009,
-          "paradigm": "Imperative",
-          "typing": "Static, structural"
+          "name": "Jane Seymour",
+          "born": 1508,
+          "fate": "Died"
+        },
+        {
+          "name": "Anne of Cleves",
+          "born": 1515,
+          "fate": "Divorced"
+        },
+        {
+          "name": "Catherine Howard",
+          "born": 1523,
+          "fate": "Beheaded"
+        },
+        {
+          "name": "Catherine Parr",
+          "born": 1512,
+          "fate": "Survived"
         }
       ]
     }
@@ -136,15 +147,19 @@ Go	2009	Imperative
 ### Scene III — rendered `--as display`, for thine own eye
 
 ```
-                 Programming languages                  
-┏━━━━━━━━━┳━━━━━━┳━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━┓
-┃ Name    ┃ Year ┃ Paradigm       ┃ Typing             ┃
-┡━━━━━━━━━╇━━━━━━╇━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━┩
-│ Python  │ 1991 │ Multi-paradigm │ Dynamic, duck      │
-│ Haskell │ 1990 │ Functional     │ Static, inferred   │
-│ Go      │ 2009 │ Imperative     │ Static, structural │
-└─────────┴──────┴────────────────┴────────────────────┘
-    A small sample of notable programming languages.
+           Wives of Henry VIII           
+┏━━━━━━━━━━━━━━━━━━━━━┳━━━━━━┳━━━━━━━━━━┓
+┃ Name                ┃ Born ┃ Fate     ┃
+┡━━━━━━━━━━━━━━━━━━━━━╇━━━━━━╇━━━━━━━━━━┩
+│ Catherine of Aragon │ 1485 │ Divorced │
+│ Anne Boleyn         │ 1501 │ Beheaded │
+│ Jane Seymour        │ 1508 │ Died     │
+│ Anne of Cleves      │ 1515 │ Divorced │
+│ Catherine Howard    │ 1523 │ Beheaded │
+│ Catherine Parr      │ 1512 │ Survived │
+└─────────────────────┴──────┴──────────┘
+   Divorced, beheaded, died; divorced,   
+           beheaded, survived.
 ```
 
 ## Of the Licence

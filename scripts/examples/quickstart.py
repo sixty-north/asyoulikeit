@@ -1,4 +1,4 @@
-"""Quickstart example: list a handful of programming languages as a Report.
+"""Quickstart example: list the six wives of Henry VIII as a Report.
 
 Run this file directly to see the default display format:
 
@@ -17,7 +17,6 @@ into the README.
 import click
 
 from asyoulikeit import (
-    Importance,
     Report,
     Reports,
     TabularData,
@@ -27,23 +26,25 @@ from asyoulikeit import (
 
 @click.command()
 @tabulated_output
-def list_languages():
-    """List some well-known programming languages."""
+def list_wives():
+    """List the six wives of Henry VIII."""
     data = (
         TabularData(
-            title="Programming languages",
-            description="A small sample of notable programming languages.",
+            title="Wives of Henry VIII",
+            description="Divorced, beheaded, died; divorced, beheaded, survived.",
         )
         .add_column("name", "Name")
-        .add_column("year", "Year")
-        .add_column("paradigm", "Paradigm")
-        .add_column("typing", "Typing", importance=Importance.DETAIL)
-        .add_row(name="Python", year=1991, paradigm="Multi-paradigm", typing="Dynamic, duck")
-        .add_row(name="Haskell", year=1990, paradigm="Functional", typing="Static, inferred")
-        .add_row(name="Go", year=2009, paradigm="Imperative", typing="Static, structural")
+        .add_column("born", "Born")
+        .add_column("fate", "Fate")
+        .add_row(name="Catherine of Aragon", born=1485, fate="Divorced")
+        .add_row(name="Anne Boleyn", born=1501, fate="Beheaded")
+        .add_row(name="Jane Seymour", born=1508, fate="Died")
+        .add_row(name="Anne of Cleves", born=1515, fate="Divorced")
+        .add_row(name="Catherine Howard", born=1523, fate="Beheaded")
+        .add_row(name="Catherine Parr", born=1512, fate="Survived")
     )
-    return Reports(languages=Report(data=data))
+    return Reports(wives=Report(data=data))
 
 
 if __name__ == "__main__":
-    list_languages()
+    list_wives()
