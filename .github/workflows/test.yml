@@ -65,9 +65,9 @@ jobs:
           python-version: ${{ matrix.python-version }}
           cache-dependency-glob: pyproject.toml
 
-      - name: Install dependency environment (without aspects itself)
+      - name: Install dependency environment (without asyoulikeit itself)
         # Sync all dev/test deps into the venv but skip installing the
-        # aspects project. We'll install it from a freshly-built wheel
+        # asyoulikeit project. We'll install it from a freshly-built wheel
         # below so tests exercise the distribution artifact; this is what
         # catches packaging blunders like missing package-data, omitted
         # entry points, or an unshipped py.typed marker.

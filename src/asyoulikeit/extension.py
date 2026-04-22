@@ -18,8 +18,8 @@ from typing import Type
 import stevedore
 import stevedore.exception
 
-from aspects._text import first_line, normalize_name, strip_lines
-from aspects.exceptions import AspectsError
+from asyoulikeit._text import first_line, normalize_name, strip_lines
+from asyoulikeit.exceptions import AsyoulikeitError
 
 
 logger = logging.getLogger(__name__)
@@ -95,11 +95,11 @@ class Extension(ABC):
         Raises:
             ExtensionError: If this class is not registered as an extension.
         """
-        namespace = f"aspects.{cls.kind()}"
+        namespace = f"asyoulikeit.{cls.kind()}"
         return extension_name_from_class(namespace, cls)
 
 
-class ExtensionError(AspectsError):
+class ExtensionError(AsyoulikeitError):
     pass
 
 
@@ -220,7 +220,7 @@ def extension_name_from_class(namespace: str, extension_class: Type[Extension]) 
     all extensions in the namespace until finding one whose plugin matches the given class.
 
     Args:
-        namespace: The namespace to search (e.g., 'aspects.formatter')
+        namespace: The namespace to search (e.g., 'asyoulikeit.formatter')
         extension_class: The extension class to find
 
     Returns:

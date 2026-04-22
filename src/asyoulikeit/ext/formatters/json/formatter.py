@@ -2,8 +2,8 @@
 
 import json
 
-from aspects.formatter import Formatter
-from aspects.tabular_data import Reports, DetailLevel
+from asyoulikeit.formatter import Formatter
+from asyoulikeit.tabular_data import Reports, DetailLevel
 
 
 class JsonFormatter(Formatter):

@@ -11,8 +11,8 @@ import click
 import pytest
 from click.testing import CliRunner
 
-from aspects.cli import ALL_REPORTS, tabulated_output
-from aspects.tabular_data import (
+from asyoulikeit.cli import ALL_REPORTS, tabulated_output
+from asyoulikeit.tabular_data import (
     DetailLevel,
     Importance,
     Report,
@@ -114,12 +114,12 @@ class TestSmartDefaultFormat:
 
         # CliRunner swaps sys.stdout during invoke, so monkeypatching the real
         # sys.stdout has no effect inside the command. Instead, rebind the
-        # `sys` name inside aspects.cli to a fake whose stdout.isatty()
+        # `sys` name inside asyoulikeit.cli to a fake whose stdout.isatty()
         # returns True — the smart-default callback reads that reference.
         fake_sys = types.SimpleNamespace(
             stdout=types.SimpleNamespace(isatty=lambda: True)
         )
-        monkeypatch.setattr("aspects.cli.sys", fake_sys)
+        monkeypatch.setattr("asyoulikeit.cli.sys", fake_sys)
 
         @click.command()
         @tabulated_output

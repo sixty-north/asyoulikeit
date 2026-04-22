@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Package purpose
 
-`aspects` packages up a CLI report-rendering stack extracted from `demonstrable-visning`: a `Report`/`Reports` data model, a stevedore-based `Formatter` plug-in system with three built-in formatters, and a `@tabulated_output` Click decorator that turns a handler returning `Reports` into a command with `--as / --report / --header / --detailed` options. The same stevedore plug-in pattern has been copy-pasted into several sixty-north packages; the long-term intent is for those packages to depend on `aspects` instead. Python 3.11+.
+`asyoulikeit` packages up a CLI report-rendering stack extracted from `demonstrable-visning`: a `Report`/`Reports` data model, a stevedore-based `Formatter` plug-in system with three built-in formatters, and a `@tabulated_output` Click decorator that turns a handler returning `Reports` into a command with `--as / --report / --header / --detailed` options. The same stevedore plug-in pattern has been copy-pasted into several sixty-north packages; the long-term intent is for those packages to depend on `asyoulikeit` instead. Python 3.11+.
 
 The three built-in formatters form a symmetric mental model — keep this framing in mind when adding new formatters or extending existing ones:
 
@@ -19,7 +19,7 @@ uv sync                             # install runtime + dev deps and build the p
 uv run pytest                       # full test suite
 uv run pytest tests/test_output.py  # a single file
 uv run pytest tests/test_output.py::TestReportSelection::test_report_flag_restricts_output  # a single test
-uv run python -c "from aspects.formatter import formatter_names; print(formatter_names())"  # sanity-check entry-point registration
+uv run python -c "from asyoulikeit.formatter import formatter_names; print(formatter_names())"  # sanity-check entry-point registration
 ```
 
 After editing entry points in `pyproject.toml` (or adding a new formatter package), **re-run `uv sync`** — stevedore reads entry points from installed package metadata, so the in-place install must be rebuilt before `formatter_names()` reflects the change. Failing to do this is the most common reason a newly-added formatter "isn't found".
@@ -33,7 +33,7 @@ uv run python scripts/generate_readme.py           # regenerate README.md
 uv run python scripts/generate_readme.py --check   # verify it's in sync; prints a unified diff + exits 1 on drift
 ```
 
-A pre-commit hook (`.pre-commit-config.yaml`) runs the `--check` variant whenever `README.md`, the generator script, the template, anything under `scripts/examples/`, or any `src/aspects/*.py` changes. First-time setup in a clone:
+A pre-commit hook (`.pre-commit-config.yaml`) runs the `--check` variant whenever `README.md`, the generator script, the template, anything under `scripts/examples/`, or any `src/asyoulikeit/*.py` changes. First-time setup in a clone:
 
 ```bash
 uv run pre-commit install
@@ -43,7 +43,7 @@ When you change the public API, the example will change (or start failing), the 
 
 ## Versioning and releases
 
-Version is managed manually via `bump-my-version` (configured in `pyproject.toml` under `[tool.bumpversion]`). The single source of truth is `__version__` in `src/aspects/__init__.py`; setuptools reads it via `[tool.setuptools.dynamic]` and exposes it as the wheel's installed version. Do not edit the version by hand in more than one place — let `bump-my-version` update both the module and the `[tool.bumpversion] current_version` config in lock-step.
+Version is managed manually via `bump-my-version` (configured in `pyproject.toml` under `[tool.bumpversion]`). The single source of truth is `__version__` in `src/asyoulikeit/__init__.py`; setuptools reads it via `[tool.setuptools.dynamic]` and exposes it as the wheel's installed version. Do not edit the version by hand in more than one place — let `bump-my-version` update both the module and the `[tool.bumpversion] current_version` config in lock-step.
 
 Release flow (on a clean working tree, from `main` / `master`):
 
@@ -73,25 +73,25 @@ To release: run `bump-my-version bump <level>` on a clean `master`, then `git pu
 Click command (decorated with @tabulated_output)
    │
    ▼  returns Reports (or None)
-aspects.cli.output.tabulated_output wrapper
+asyoulikeit.cli.output.tabulated_output wrapper
    │
    ▼  filters by --report, applies --header / --detailed overrides via dataclasses.replace
-aspects.formatter.format_as(reports, format_name)
+asyoulikeit.formatter.format_as(reports, format_name)
    │
-   ▼  stevedore lookup in "aspects.formatter" namespace
+   ▼  stevedore lookup in "asyoulikeit.formatter" namespace
 <name>.Formatter (= concrete DisplayFormatter / TsvFormatter / JsonFormatter).format(reports) -> str
    │
    ▼
 click.echo(output)
 ```
 
-Only three nodes hold real logic: the decorator (`src/aspects/cli.py`), the dispatch/ABC layer (`src/aspects/formatter.py`), and each formatter's `format()` method. The rest is data classes.
+Only three nodes hold real logic: the decorator (`src/asyoulikeit/cli.py`), the dispatch/ABC layer (`src/asyoulikeit/formatter.py`), and each formatter's `format()` method. The rest is data classes.
 
-Client-facing objects (`tabulated_output`, `Report`, `Reports`, `TabularData`, `Column`, `Importance`, `DetailLevel`, `Formatter`, `format_as`, `formatter_names`, `create_formatter`, `ALL_REPORTS`, `AspectsError`, `Extension`, style-key constants, …) are re-exported from the top-level `aspects` package — consumers should `from aspects import ...` rather than reaching into the sub-modules.
+Client-facing objects (`tabulated_output`, `Report`, `Reports`, `TabularData`, `Column`, `Importance`, `DetailLevel`, `Formatter`, `format_as`, `formatter_names`, `create_formatter`, `ALL_REPORTS`, `AsyoulikeitError`, `Extension`, style-key constants, …) are re-exported from the top-level `asyoulikeit` package — consumers should `from asyoulikeit import ...` rather than reaching into the sub-modules.
 
 ### Formatter plug-in packaging (important and non-obvious)
 
-Built-in formatters live under `src/aspects/ext/formatters/<name>/`. Each sub-package has two files:
+Built-in formatters live under `src/asyoulikeit/ext/formatters/<name>/`. Each sub-package has two files:
 
 - `formatter.py` defines a concrete class with a specific name (`DisplayFormatter`, `TsvFormatter`, `JsonFormatter`).
 - `__init__.py` does `from .formatter import DisplayFormatter as Formatter` — re-exporting the concrete class under the uniform symbol `Formatter`.
@@ -99,8 +99,8 @@ Built-in formatters live under `src/aspects/ext/formatters/<name>/`. Each sub-pa
 The entry point in `pyproject.toml` then always references `<pkg>:Formatter`:
 
 ```toml
-[project.entry-points."aspects.formatter"]
-display = "aspects.ext.formatters.display:Formatter"
+[project.entry-points."asyoulikeit.formatter"]
+display = "asyoulikeit.ext.formatters.display:Formatter"
 ```
 
 This keeps the entry-point target stable while letting the concrete class name stay descriptive. The `ext/` prefix is a cross-project sixty-north convention — keep it; do not flatten. The same layout should be used for any future kinds of extensions beyond formatters.
@@ -124,7 +124,7 @@ Header behaviour is format-specific: TSV prefixes the first header cell with `# 
 ```python
 import types
 fake_sys = types.SimpleNamespace(stdout=types.SimpleNamespace(isatty=lambda: True))
-monkeypatch.setattr("aspects.cli.sys", fake_sys)
+monkeypatch.setattr("asyoulikeit.cli.sys", fake_sys)
 ```
 
 Click 8.2+ no longer accepts `mix_stderr=` on `CliRunner`; stderr is always separated — use `result.stderr` directly.
@@ -133,7 +133,7 @@ Also note: `--as` choices are computed at **decorator application time** (`click
 
 ### `Extension` ABC and namespace convention
 
-`src/aspects/extension.py` is the shared plug-in machinery. `Extension.entry_point_name()` hardcodes the namespace as `f"aspects.{cls.kind()}"`; any new kind of extension added to aspects should follow that convention (`kind() -> "widget"` ⇒ namespace `"aspects.widget"`). The class exists here, not in a consumer package, because the long-term plan is for other sixty-north packages to adopt aspects instead of duplicating this loader.
+`src/asyoulikeit/extension.py` is the shared plug-in machinery. `Extension.entry_point_name()` hardcodes the namespace as `f"asyoulikeit.{cls.kind()}"`; any new kind of extension added to asyoulikeit should follow that convention (`kind() -> "widget"` ⇒ namespace `"asyoulikeit.widget"`). The class exists here, not in a consumer package, because the long-term plan is for other sixty-north packages to adopt asyoulikeit instead of duplicating this loader.
 
 The original visning had `Extension.cache_dirpath()` tied to a visning-specific app cache; it was intentionally dropped during extraction. Re-add only if a genuine need appears.
 
@@ -143,6 +143,6 @@ The `@tabulated_output` wrapper enforces that the decorated handler returns eith
 
 ## Notes on extension
 
-- To add a new built-in formatter: create `src/aspects/ext/formatters/<name>/{formatter.py,__init__.py}` following the alias pattern above, add the `[project.entry-points."aspects.formatter"]` line, then `uv sync`. Add tests in `tests/test_formatters.py`.
-- Consumers of aspects register their own formatters the same way from their own package — no code changes in aspects required.
-- `src/aspects/_text.py` is internal (underscore-prefixed) — not part of the public API.
+- To add a new built-in formatter: create `src/asyoulikeit/ext/formatters/<name>/{formatter.py,__init__.py}` following the alias pattern above, add the `[project.entry-points."asyoulikeit.formatter"]` line, then `uv sync`. Add tests in `tests/test_formatters.py`.
+- Consumers of asyoulikeit register their own formatters the same way from their own package — no code changes in asyoulikeit required.
+- `src/asyoulikeit/_text.py` is internal (underscore-prefixed) — not part of the public API.

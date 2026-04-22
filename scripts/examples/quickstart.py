@@ -16,7 +16,7 @@ into the README.
 
 import click
 
-from aspects import (
+from asyoulikeit import (
     Importance,
     Report,
     Reports,

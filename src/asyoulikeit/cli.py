@@ -14,8 +14,8 @@ from typing import Callable, Iterable
 import click
 from click_option_group import OptionGroup
 
-from aspects.formatter import formatter_names, format_as
-from aspects.tabular_data import DetailLevel, Reports
+from asyoulikeit.formatter import formatter_names, format_as
+from asyoulikeit.tabular_data import DetailLevel, Reports
 
 
 class _UniversalContainer(Container):

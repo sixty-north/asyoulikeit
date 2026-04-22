@@ -4,8 +4,8 @@ import json
 import re
 import pytest
 
-from aspects.tabular_data import TabularData, Reports, Report
-from aspects.formatter import (
+from asyoulikeit.tabular_data import TabularData, Reports, Report
+from asyoulikeit.formatter import (
     create_formatter,
     format_as,
     FormatterExtensionError,

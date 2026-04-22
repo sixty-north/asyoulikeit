@@ -12,5 +12,5 @@ repos:
             | scripts/generate_readme\.py
             | scripts/readme_template\.md\.j2
             | scripts/examples/.*
-            | src/aspects/.*\.py
+            | src/asyoulikeit/.*\.py
           )$

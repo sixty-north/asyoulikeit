@@ -2,7 +2,7 @@
 
 import pytest
 
-from aspects.tabular_data import TabularData, Column, Importance
+from asyoulikeit.tabular_data import TabularData, Column, Importance
 
 
 class TestColumn:

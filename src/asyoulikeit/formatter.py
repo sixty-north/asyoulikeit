@@ -3,14 +3,14 @@
 from abc import abstractmethod
 from typing import Type
 
-from aspects.extension import (
+from asyoulikeit.extension import (
     Extension, ExtensionError, create_extension, describe_extension,
     list_extensions, extension,
 )
-from aspects.tabular_data import Reports
+from asyoulikeit.tabular_data import Reports
 
 KIND = "formatter"
-FORMATTER_NAMESPACE = f"aspects.{KIND}"
+FORMATTER_NAMESPACE = f"asyoulikeit.{KIND}"
 
 
 class Formatter(Extension):

@@ -14,8 +14,8 @@ from rich.style import Style
 from rich.table import Table
 from rich.text import Text
 
-from aspects.formatter import Formatter
-from aspects.tabular_data import (
+from asyoulikeit.formatter import Formatter
+from asyoulikeit.tabular_data import (
     Reports,
     DetailLevel,
     STYLE_FOREGROUND_COLOR,

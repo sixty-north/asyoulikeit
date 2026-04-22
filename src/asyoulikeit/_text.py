@@ -1,6 +1,6 @@
 """Internal text utilities extracted from the originating package.
 
-These are small helpers used by :mod:`aspects.extension` for rendering
+These are small helpers used by :mod:`asyoulikeit.extension` for rendering
 extension descriptions. They are kept internal (underscore-prefixed module)
 because they are not part of the public API.
 """

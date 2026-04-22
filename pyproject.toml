@@ -3,12 +3,12 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "aspects"
+name = "asyoulikeit"
 dynamic = ["version"]
 authors = [
-    { name = "Robert Smallshire", email = "systems+aspects@sixty-north.com" },
+    { name = "Robert Smallshire", email = "systems+asyoulikeit@sixty-north.com" },
 ]
-description = "Configurable CLI report aspects for Python projects."
+description = "Configurable CLI report asyoulikeit for Python projects."
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]
@@ -35,26 +35,26 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/sixty-north/aspects"
-Repository = "https://github.com/sixty-north/aspects"
-Issues = "https://github.com/sixty-north/aspects/issues"
+Homepage = "https://github.com/sixty-north/asyoulikeit"
+Repository = "https://github.com/sixty-north/asyoulikeit"
+Issues = "https://github.com/sixty-north/asyoulikeit/issues"
 
-[project.entry-points."aspects.formatter"]
-display = "aspects.ext.formatters.display:Formatter"
-tsv = "aspects.ext.formatters.tsv:Formatter"
-json = "aspects.ext.formatters.json:Formatter"
+[project.entry-points."asyoulikeit.formatter"]
+display = "asyoulikeit.ext.formatters.display:Formatter"
+tsv = "asyoulikeit.ext.formatters.tsv:Formatter"
+json = "asyoulikeit.ext.formatters.json:Formatter"
 
 [tool.setuptools]
 package-dir = { "" = "src" }
 
 [tool.setuptools.dynamic]
-version = { attr = "aspects.__version__" }
+version = { attr = "asyoulikeit.__version__" }
 
 [tool.setuptools.packages.find]
 where = ["src"]
 
 [tool.setuptools.package-data]
-aspects = ["py.typed"]
+asyoulikeit = ["py.typed"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -80,5 +80,5 @@ message = "Bump version: {current_version} → {new_version}"
 tag_name = "v{new_version}"
 tag_message = "Bump version: {current_version} → {new_version}"
 files = [
-    { filename = "src/aspects/__init__.py" },
+    { filename = "src/asyoulikeit/__init__.py" },
 ]

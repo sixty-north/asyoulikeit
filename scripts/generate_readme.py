@@ -89,12 +89,12 @@ def render() -> str:
     )
     template = env.get_template(TEMPLATE_NAME)
 
-    import aspects
+    import asyoulikeit
 
     quickstart = capture_example(EXAMPLES_DIR / "quickstart.py")
 
     return template.render(
-        version=aspects.__version__,
+        version=asyoulikeit.__version__,
         example=quickstart,
     )
 

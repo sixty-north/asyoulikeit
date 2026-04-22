@@ -2,17 +2,17 @@
 
 __version__ = "0.2.0"
 
-from aspects.cli import ALL_REPORTS, tabulated_output
-from aspects.exceptions import AspectsError
-from aspects.extension import Extension, ExtensionError
-from aspects.formatter import (
+from asyoulikeit.cli import ALL_REPORTS, tabulated_output
+from asyoulikeit.exceptions import AsyoulikeitError
+from asyoulikeit.extension import Extension, ExtensionError
+from asyoulikeit.formatter import (
     Formatter,
     FormatterExtensionError,
     create_formatter,
     format_as,
     formatter_names,
 )
-from aspects.tabular_data import (
+from asyoulikeit.tabular_data import (
     STYLE_ALIGNMENT,
     STYLE_BACKGROUND_COLOR,
     STYLE_BOLD,
@@ -29,7 +29,7 @@ from aspects.tabular_data import (
 
 __all__ = [
     "ALL_REPORTS",
-    "AspectsError",
+    "AsyoulikeitError",
     "Column",
     "DetailLevel",
     "Extension",
