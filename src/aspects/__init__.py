@@ -1,6 +1,6 @@
 """Utilities for enriching CLI tools with structured report output."""
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 from aspects.cli import ALL_REPORTS, tabulated_output
 from aspects.exceptions import AspectsError
