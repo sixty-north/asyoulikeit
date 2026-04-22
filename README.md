@@ -6,6 +6,8 @@
 
 > `--as tsv | json | display` → *as you like it*
 
+> *Now is the winter of thy discontent, made glorious summer by this son of J.*
+
 Gentle reader, this library doth furnish thy Python terminal tools with reports most manifold: to the machine in ordered JSON, to the pipe in honest TSV, and to thine own eye in fair display — every format, verily, **as thou likest it**.
 
 ## Prologue — a Quickstart
