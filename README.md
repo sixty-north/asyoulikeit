@@ -10,7 +10,7 @@ Gentle reader, this library doth furnish thy terminal tools with reports most ma
 
 ## Prologue
 
-Take thou a handler that returneth a `Reports` object, and with `@tabulated_output` do thou dress it thus:
+Take thou a handler that returneth `Reports`, and with `@tabulated_output` do thou dress it thus:
 
 ```python
 """List the six wives of Henry VIII as a Report.
@@ -67,7 +67,7 @@ if __name__ == "__main__":
     list_wives()
 ```
 
-The decorator doth impart these options unto thy command: `--as` (which format thou shalt have), `--report` (which reports shall be shown), `--header` / `--no-header` (shall column headings appear?), and `--detailed` / `--essential` (how copious thy detail?). When `--as` is withheld, the decorator judgeth wisely: to a terminal it giveth `display`; to a pipe, `tsv`.
+Thus decorated are options imparted unto thy command: `--as` (which format thou shalt have), `--report` (which reports shall be shown), `--header` / `--no-header` (shall column headings appear?), and `--detailed` / `--essential` (how copious thy detail?). When `--as` is withheld, judgement is passed wisely: to a terminal is given `display`; to a pipe, `tsv`.
 
 ### Scene I — `--as tsv`, for the devices of UNIX
 
