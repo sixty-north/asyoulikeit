@@ -23,10 +23,6 @@ Or force a specific format:
 
     python scripts/examples/quickstart.py --as tsv
     python scripts/examples/quickstart.py --as json
-
-The ``scripts/generate_readme.py`` generator imports this file, invokes the
-command with each built-in format, and injects the source + captured outputs
-into the README.
 """
 
 import click
