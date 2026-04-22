@@ -6,7 +6,7 @@
 
 > `--as tsv | json | display` → *as you like it*
 
-Gentle reader, this library doth furnish thy terminal tools with reports most manifold: to the machine made glorious by this Son of Jay, to the pipe in honest tabulations, and to thine own eye in fair display — every format, verily, **as thou likest it**.
+Gentle reader, this library doth furnish thy terminal tools with reports most manifold: to the device made glorious by this Son of Jay, to the pipe in honest tabulations, and to thine own eye in fair display — every format, verily, **as thou likest it**.
 
 ## Prologue
 
@@ -69,7 +69,7 @@ if __name__ == "__main__":
 
 The decorator doth impart these options unto thy command: `--as` (which format thou shalt have), `--report` (which reports shall be shown), `--header` / `--no-header` (shall column headings appear?), and `--detailed` / `--essential` (how copious thy detail?). When `--as` is withheld, the decorator judgeth wisely: to a terminal it giveth `display`; to a pipe, `tsv`.
 
-### Scene I — rendered `--as tsv`, for the machines of UNIX
+### Scene I — rendered `--as tsv`, for the devices of UNIX
 
 ```
 # Name	Born	Fate
@@ -81,7 +81,7 @@ Catherine Howard	1523	Beheaded
 Catherine Parr	1512	Survived
 ```
 
-### Scene II — rendered `--as json`, for the machines of the web
+### Scene II — rendered `--as json`, for the devices of the web
 
 ```json
 {
