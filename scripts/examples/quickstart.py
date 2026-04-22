@@ -17,12 +17,12 @@ from asyoulikeit import (
     Report,
     Reports,
     TabularData,
-    tabulated_output,
+    report_output,
 )
 
 
 @click.command()
-@tabulated_output
+@report_output
 def list_wives():
     """List the six wives of Henry VIII."""
     data = (

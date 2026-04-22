@@ -1,4 +1,4 @@
-"""Tests for the ``tabulated_output`` decorator.
+"""Tests for the ``report_output`` decorator.
 
 These tests define synthetic Click commands inside each test function so that
 every assertion exercises the full path: decorator → handler → Reports →
@@ -11,7 +11,7 @@ import click
 import pytest
 from click.testing import CliRunner
 
-from asyoulikeit.cli import ALL_REPORTS, tabulated_output
+from asyoulikeit.cli import ALL_REPORTS, report_output
 from asyoulikeit.tabular_data import (
     DetailLevel,
     Importance,
@@ -48,7 +48,7 @@ class TestFormatSelection:
 
     def test_as_tsv_output_shape(self):
         @click.command()
-        @tabulated_output
+        @report_output
         def cmd():
             return _make_people_reports()
 
@@ -67,7 +67,7 @@ class TestFormatSelection:
 
     def test_as_json_output_shape(self):
         @click.command()
-        @tabulated_output
+        @report_output
         def cmd():
             return _make_people_reports()
 
@@ -83,7 +83,7 @@ class TestFormatSelection:
 
     def test_as_display_renders(self):
         @click.command()
-        @tabulated_output
+        @report_output
         def cmd():
             return _make_people_reports()
 
@@ -99,7 +99,7 @@ class TestSmartDefaultFormat:
     def test_default_is_tsv_when_not_a_tty(self):
         """CliRunner's captured stdout reports isatty() == False, so default is tsv."""
         @click.command()
-        @tabulated_output
+        @report_output
         def cmd():
             data = TabularData().add_column("x", "X").add_row(x=1)
             return Reports(only=Report(data=data))
@@ -122,7 +122,7 @@ class TestSmartDefaultFormat:
         monkeypatch.setattr("asyoulikeit.cli.sys", fake_sys)
 
         @click.command()
-        @tabulated_output
+        @report_output
         def cmd():
             data = TabularData().add_column("x", "X").add_row(x=1)
             return Reports(only=Report(data=data))
@@ -139,7 +139,7 @@ class TestHeaderToggle:
 
     def test_header_on_by_default(self):
         @click.command()
-        @tabulated_output
+        @report_output
         def cmd():
             data = TabularData().add_column("x", "X").add_row(x=1)
             return Reports(only=Report(data=data))
@@ -149,7 +149,7 @@ class TestHeaderToggle:
 
     def test_no_header_suppresses_tsv_header_row(self):
         @click.command()
-        @tabulated_output
+        @report_output
         def cmd():
             data = TabularData().add_column("x", "X").add_row(x=1)
             return Reports(only=Report(data=data))
@@ -164,7 +164,7 @@ class TestDetailLevelFiltering:
 
     def test_detailed_includes_detail_columns_and_rows_in_tsv(self):
         @click.command()
-        @tabulated_output
+        @report_output
         def cmd():
             return _make_people_reports()
 
@@ -177,7 +177,7 @@ class TestDetailLevelFiltering:
 
     def test_essential_excludes_detail_columns_and_rows_in_json(self):
         @click.command()
-        @tabulated_output
+        @report_output
         def cmd():
             return _make_people_reports()
 
@@ -196,7 +196,7 @@ class TestReportSelection:
 
     def test_report_flag_restricts_output(self):
         @click.command()
-        @tabulated_output
+        @report_output
         def cmd():
             return _make_people_reports()
 
@@ -209,7 +209,7 @@ class TestReportSelection:
 
     def test_unknown_report_emits_warning_and_exits(self):
         @click.command()
-        @tabulated_output
+        @report_output
         def cmd():
             return _make_people_reports()
 
@@ -224,7 +224,7 @@ class TestReportSelection:
 
     def test_report_flag_can_be_specified_multiple_times(self):
         @click.command()
-        @tabulated_output
+        @report_output
         def cmd():
             return _make_people_reports()
 
@@ -240,9 +240,9 @@ class TestDefaultReportsOption:
     """Tests for the decorator's default_reports argument."""
 
     def test_silent_by_default_when_none(self):
-        """@tabulated_output(default_reports=None) produces no output by default."""
+        """@report_output(default_reports=None) produces no output by default."""
         @click.command()
-        @tabulated_output(default_reports=None)
+        @report_output(default_reports=None)
         def cmd():
             return _make_people_reports()
 
@@ -252,7 +252,7 @@ class TestDefaultReportsOption:
 
     def test_silent_mode_still_honors_report_flag(self):
         @click.command()
-        @tabulated_output(default_reports=None)
+        @report_output(default_reports=None)
         def cmd():
             return _make_people_reports()
 
@@ -263,7 +263,7 @@ class TestDefaultReportsOption:
 
     def test_named_default_reports_limits_output(self):
         @click.command()
-        @tabulated_output(default_reports=["colors"])
+        @report_output(default_reports=["colors"])
         def cmd():
             return _make_people_reports()
 
@@ -273,15 +273,15 @@ class TestDefaultReportsOption:
         assert "# Name" not in result.output
 
     def test_all_reports_sentinel_is_default(self):
-        """@tabulated_output and @tabulated_output(default_reports=ALL_REPORTS)
+        """@report_output and @report_output(default_reports=ALL_REPORTS)
         produce the same output."""
         @click.command()
-        @tabulated_output
+        @report_output
         def bare():
             return _make_people_reports()
 
         @click.command()
-        @tabulated_output(default_reports=ALL_REPORTS)
+        @report_output(default_reports=ALL_REPORTS)
         def explicit():
             return _make_people_reports()
 
@@ -297,7 +297,7 @@ class TestReturnContract:
 
     def test_none_return_produces_no_output(self):
         @click.command()
-        @tabulated_output
+        @report_output
         def cmd():
             return None
 
@@ -307,7 +307,7 @@ class TestReturnContract:
 
     def test_non_reports_return_raises_type_error(self):
         @click.command()
-        @tabulated_output
+        @report_output
         def cmd():
             return "not a Reports"
 
@@ -323,7 +323,7 @@ class TestReportOverrides:
     def test_header_flag_overrides_report_header_preference(self):
         """A report with header=True is overridden by --no-header."""
         @click.command()
-        @tabulated_output
+        @report_output
         def cmd():
             data = TabularData().add_column("x", "X").add_row(x=1)
             return Reports(only=Report(data=data, header=True))
@@ -335,7 +335,7 @@ class TestReportOverrides:
     def test_detail_level_flag_overrides_report_detail_preference(self):
         """A report asking for ESSENTIAL is overridden by --detailed."""
         @click.command()
-        @tabulated_output
+        @report_output
         def cmd():
             data = (
                 TabularData()

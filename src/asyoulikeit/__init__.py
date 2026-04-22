@@ -2,7 +2,8 @@
 
 __version__ = "0.2.5"
 
-from asyoulikeit.cli import ALL_REPORTS, tabulated_output
+from asyoulikeit.cli import ALL_REPORTS, report_output
+from asyoulikeit.content import ReportContent
 from asyoulikeit.exceptions import AsyoulikeitError
 from asyoulikeit.extension import Extension, ExtensionError
 from asyoulikeit.formatter import (
@@ -38,6 +39,7 @@ __all__ = [
     "FormatterExtensionError",
     "Importance",
     "Report",
+    "ReportContent",
     "Reports",
     "STYLE_ALIGNMENT",
     "STYLE_BACKGROUND_COLOR",
@@ -49,5 +51,5 @@ __all__ = [
     "create_formatter",
     "format_as",
     "formatter_names",
-    "tabulated_output",
+    "report_output",
 ]

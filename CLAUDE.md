@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Package purpose
 
-`asyoulikeit` packages up a CLI report-rendering stack extracted from `demonstrable-visning`: a `Report`/`Reports` data model, a stevedore-based `Formatter` plug-in system with three built-in formatters, and a `@tabulated_output` Click decorator that turns a handler returning `Reports` into a command with `--as / --report / --header / --detailed` options. The same stevedore plug-in pattern has been copy-pasted into several sixty-north packages; the long-term intent is for those packages to depend on `asyoulikeit` instead. Python 3.11+.
+`asyoulikeit` packages up a CLI report-rendering stack extracted from `demonstrable-visning`: a `Report`/`Reports` data model, a stevedore-based `Formatter` plug-in system with three built-in formatters, and a `@report_output` Click decorator that turns a handler returning `Reports` into a command with `--as / --report / --header / --detailed` options. The same stevedore plug-in pattern has been copy-pasted into several sixty-north packages; the long-term intent is for those packages to depend on `asyoulikeit` instead. Python 3.11+.
 
 The three built-in formatters form a symmetric mental model — keep this framing in mind when adding new formatters or extending existing ones:
 
@@ -93,10 +93,10 @@ To release: run `bump-my-version bump <level>` on a clean `master`, then `git pu
 ### End-to-end flow
 
 ```
-Click command (decorated with @tabulated_output)
+Click command (decorated with @report_output)
    │
    ▼  returns Reports (or None)
-asyoulikeit.cli.output.tabulated_output wrapper
+asyoulikeit.cli.output.report_output wrapper
    │
    ▼  filters by --report, applies --header / --detailed overrides via dataclasses.replace
 asyoulikeit.formatter.format_as(reports, format_name)
@@ -110,7 +110,7 @@ click.echo(output)
 
 Only three nodes hold real logic: the decorator (`src/asyoulikeit/cli.py`), the dispatch/ABC layer (`src/asyoulikeit/formatter.py`), and each formatter's `format()` method. The rest is data classes.
 
-Client-facing objects (`tabulated_output`, `Report`, `Reports`, `TabularData`, `Column`, `Importance`, `DetailLevel`, `Formatter`, `format_as`, `formatter_names`, `create_formatter`, `ALL_REPORTS`, `AsyoulikeitError`, `Extension`, style-key constants, …) are re-exported from the top-level `asyoulikeit` package — consumers should `from asyoulikeit import ...` rather than reaching into the sub-modules.
+Client-facing objects (`report_output`, `Report`, `Reports`, `TabularData`, `Column`, `Importance`, `DetailLevel`, `Formatter`, `format_as`, `formatter_names`, `create_formatter`, `ALL_REPORTS`, `AsyoulikeitError`, `Extension`, style-key constants, …) are re-exported from the top-level `asyoulikeit` package — consumers should `from asyoulikeit import ...` rather than reaching into the sub-modules.
 
 ### Formatter plug-in packaging (important and non-obvious)
 
@@ -142,7 +142,7 @@ Header behaviour is format-specific: TSV prefixes the first header cell with `# 
 
 ### Smart `--as` default and testing it
 
-`tabulated_output` injects `--as` with a callback that reads `sys.stdout.isatty()` at invocation time: `display` when interactive, `tsv` when piped. When writing a test that needs to exercise the TTY branch, note that `click.testing.CliRunner` swaps `sys.stdout` inside `invoke()`, so monkeypatching the real `sys.stdout.isatty` has no effect. Instead, rebind the `sys` name inside the decorator module:
+`report_output` injects `--as` with a callback that reads `sys.stdout.isatty()` at invocation time: `display` when interactive, `tsv` when piped. When writing a test that needs to exercise the TTY branch, note that `click.testing.CliRunner` swaps `sys.stdout` inside `invoke()`, so monkeypatching the real `sys.stdout.isatty` has no effect. Instead, rebind the `sys` name inside the decorator module:
 
 ```python
 import types
@@ -162,7 +162,7 @@ The original visning had `Extension.cache_dirpath()` tied to a visning-specific 
 
 ### Handler return contract
 
-The `@tabulated_output` wrapper enforces that the decorated handler returns either a `Reports` instance or `None`. Anything else raises `TypeError` at runtime (caught by `CliRunner` as `result.exception`). `None` is permitted and emits no output — useful for action commands declared with `@tabulated_output(default_reports=None)`.
+The `@report_output` wrapper enforces that the decorated handler returns either a `Reports` instance or `None`. Anything else raises `TypeError` at runtime (caught by `CliRunner` as `result.exception`). `None` is permitted and emits no output — useful for action commands declared with `@report_output(default_reports=None)`.
 
 ## Notes on extension
 

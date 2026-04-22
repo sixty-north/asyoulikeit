@@ -10,6 +10,8 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Optional
 
+from asyoulikeit.content import ReportContent
+
 
 # Style property keys for cell formatting
 # These keys are used in style dictionaries within cells of a styles TabularData instance
@@ -61,7 +63,7 @@ class Column:
     importance: Importance = Importance.ESSENTIAL
 
 
-class TabularData:
+class TabularData(ReportContent):
     """Container for tabular data with schema validation.
 
     TabularData enforces that all rows match a defined column schema,
@@ -102,6 +104,11 @@ class TabularData:
         self._columns: dict[str, Column] = {}
         self._rows: list[dict[str, Any]] = []
         self._row_importances: list[Importance] = []
+
+    @classmethod
+    def kind(cls) -> str:
+        """Return the :class:`ReportContent` kind identifier: ``"tabular"``."""
+        return "tabular"
 
     @classmethod
     def from_mappings(
@@ -527,14 +534,15 @@ class Report:
     not starting with digit) to ensure compatibility with JSON/JavaScript.
 
     Attributes:
-        data: The tabular data for this report
+        data: The content of this report (a :class:`ReportContent` subclass;
+            currently always a :class:`TabularData`)
         styles: Optional styling information with same structure as data
         title: Optional title for the report (may differ from TabularData title)
         description: Optional description (may differ from TabularData description)
         detail_level: Default detail level for this report (can be overridden by CLI)
         header: Whether to include headers by default (can be overridden by CLI)
     """
-    data: TabularData
+    data: ReportContent
     styles: Optional[TabularData] = None
     title: Optional[str] = None
     description: Optional[str] = None

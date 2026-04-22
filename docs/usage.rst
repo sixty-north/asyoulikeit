@@ -30,18 +30,18 @@ Or with uv:
 The minimal example
 -------------------
 
-A Click command decorated with :func:`~asyoulikeit.tabulated_output`
+A Click command decorated with :func:`~asyoulikeit.report_output`
 returns a :class:`~asyoulikeit.Reports` value. That's essentially all
 there is to it.
 
 .. code-block:: python
 
    import click
-   from asyoulikeit import Report, Reports, TabularData, tabulated_output
+   from asyoulikeit import Report, Reports, TabularData, report_output
 
 
    @click.command()
-   @tabulated_output
+   @report_output
    def list_users():
        """List the users of the system."""
        data = (
@@ -131,10 +131,10 @@ passes ``--report`` multiple times.
        roles=Report(data=roles_data),
    )
 
-Use ``@tabulated_output(default_reports=None)`` to make a command
+Use ``@report_output(default_reports=None)`` to make a command
 silent by default — useful for action commands that should produce no
 visible output unless the user asks for a specific report. Use
-``@tabulated_output(default_reports=["users"])`` to show only a
+``@report_output(default_reports=["users"])`` to show only a
 specific subset by default.
 
 
@@ -179,4 +179,4 @@ Subclass :class:`~asyoulikeit.Formatter` and implement the single
 ``format(reports) -> str`` method. After ``pip install`` / ``uv sync``
 of the registering package, the new format name appears automatically
 in the ``--as`` choices of every command decorated with
-``@tabulated_output``.
+``@report_output``.

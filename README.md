@@ -17,7 +17,7 @@ Gentle reader, this library doth furnish thy terminal tools with reports most ma
 
 ## Prologue
 
-Take thou a handler that returneth `Reports`, and with `@tabulated_output` do thou dress it thus:
+Take thou a handler that returneth `Reports`, and with `@report_output` do thou dress it thus:
 
 ```python
 """List the six wives of Henry VIII as a Report.
@@ -39,12 +39,12 @@ from asyoulikeit import (
     Report,
     Reports,
     TabularData,
-    tabulated_output,
+    report_output,
 )
 
 
 @click.command()
-@tabulated_output
+@report_output
 def list_wives():
     """List the six wives of Henry VIII."""
     data = (

@@ -2,7 +2,7 @@ API reference
 =============
 
 The entire public API is re-exported from the top-level ``asyoulikeit``
-package, so ``from asyoulikeit import Report, Reports, tabulated_output``
+package, so ``from asyoulikeit import Report, Reports, report_output``
 is the intended import path. The sub-module documentation below is for
 readers who want the full picture.
 

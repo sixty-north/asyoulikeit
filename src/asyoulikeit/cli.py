@@ -1,6 +1,6 @@
-"""Tabulated output decorator for Click commands.
+"""Report output decorator for Click commands.
 
-Provides the :func:`tabulated_output` decorator for commands that produce
+Provides the :func:`report_output` decorator for commands that produce
 formatted report output with support for multiple reports, format selection
 (display/TSV/JSON), and column filtering.
 """
@@ -22,7 +22,7 @@ class _UniversalContainer(Container):
     """A container that contains everything.
 
     This container responds True to all containment checks (`x in container`).
-    Used in @tabulated_output to represent "show all reports by default".
+    Used in @report_output to represent "show all reports by default".
 
     Implements the collections.abc.Container protocol.
     """
@@ -42,7 +42,7 @@ class _UniversalContainer(Container):
 ALL_REPORTS = _UniversalContainer()
 
 # Option group for tabulated output formatting options
-TABULATED_OUTPUT_GROUP = OptionGroup('Tabulated Output Options')
+REPORT_OUTPUT_GROUP = OptionGroup('Report Output Options')
 
 
 def _warn(message: str) -> None:
@@ -50,7 +50,7 @@ def _warn(message: str) -> None:
     click.secho(message, fg="magenta", err=True)
 
 
-def tabulated_output(
+def report_output(
     func: Callable = None,
     /,
     *,
@@ -82,14 +82,14 @@ def tabulated_output(
     display omits headers/title/caption, JSON ignores the flag.
 
     Examples:
-        @tabulated_output  # Show all reports (reporting command)
-        @tabulated_output(default_reports=ALL_REPORTS)  # Explicit, same as above
-        @tabulated_output(default_reports=None)  # Silent by default (action command)
-        @tabulated_output(default_reports=["outputs"])  # Show only outputs by default
+        @report_output  # Show all reports (reporting command)
+        @report_output(default_reports=ALL_REPORTS)  # Explicit, same as above
+        @report_output(default_reports=None)  # Silent by default (action command)
+        @report_output(default_reports=["outputs"])  # Show only outputs by default
     """
     # Decorator factory pattern: if called with parentheses, func is None
     if func is None:
-        return functools.partial(tabulated_output, default_reports=default_reports)
+        return functools.partial(report_output, default_reports=default_reports)
 
     # Normalize to Container at decoration time for efficient runtime checking
     if default_reports is ALL_REPORTS:
@@ -119,12 +119,12 @@ def tabulated_output(
             return DetailLevel.ESSENTIAL
 
     # Apply option group for tabulated output formatting
-    decorated = TABULATED_OUTPUT_GROUP.option(
+    decorated = REPORT_OUTPUT_GROUP.option(
         "--report",
         multiple=True,
         help="Report name(s) to display (can be specified multiple times). Shows all if omitted."
     )(
-        TABULATED_OUTPUT_GROUP.option(
+        REPORT_OUTPUT_GROUP.option(
             "--header/--no-header",
             "header",
             default=None,  # None means use report's default
@@ -132,7 +132,7 @@ def tabulated_output(
                  "Format-specific: TSV prefixes first cell with '#', "
                  "display omits headers/title/caption, JSON ignores this flag.",
         )(
-            TABULATED_OUTPUT_GROUP.option(
+            REPORT_OUTPUT_GROUP.option(
                 "--detailed/--essential",
                 "detail_level",
                 default=None,
@@ -140,7 +140,7 @@ def tabulated_output(
                 help="Include detailed columns or only essential columns. "
                      "Auto-detects based on output format if not specified."
             )(
-                TABULATED_OUTPUT_GROUP.option(
+                REPORT_OUTPUT_GROUP.option(
                     "--as",
                     "as_format",
                     type=click.Choice(formatter_names(), case_sensitive=False),
@@ -163,7 +163,7 @@ def tabulated_output(
             # Result must be a Reports object
             if not isinstance(result, Reports):
                 raise TypeError(
-                    f"Command decorated with @tabulated_output must return Reports or None, "
+                    f"Command decorated with @report_output must return Reports or None, "
                     f"not {type(result).__name__}"
                 )
 

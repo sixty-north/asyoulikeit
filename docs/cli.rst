@@ -2,7 +2,7 @@ Command-line options
 ====================
 
 Any tool built with ``asyoulikeit`` gains a standard set of
-output-formatting options on every ``@tabulated_output``-decorated
+output-formatting options on every ``@report_output``-decorated
 command. If a project documents its CLI as being powered by
 ``asyoulikeit``, everything on this page applies.
 
