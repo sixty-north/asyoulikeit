@@ -91,11 +91,13 @@ def render() -> str:
 
     import asyoulikeit
 
-    quickstart = capture_example(EXAMPLES_DIR / "quickstart.py")
+    table_example = capture_example(EXAMPLES_DIR / "quickstart.py")
+    tree_example = capture_example(EXAMPLES_DIR / "ayli_tree.py")
 
     return template.render(
         version=asyoulikeit.__version__,
-        example=quickstart,
+        table_example=table_example,
+        tree_example=tree_example,
     )
 
 

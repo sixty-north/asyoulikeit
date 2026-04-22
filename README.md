@@ -17,7 +17,9 @@ Gentle reader, this library doth furnish thy terminal tools with reports most ma
 
 ## Prologue
 
-Take thou a handler that returneth `Reports`, and with `@report_output` do thou dress it thus:
+Take thou a handler that returneth `Reports`, and with `@report_output` do thou dress it. Thus decorated are options imparted unto thy command: `--as` (which format thou shalt have), `--report` (which reports shall be shown), `--header` / `--no-header` (shall columns have their heads?), and `--detailed` / `--essential` (how copious thy detail?). When `--as` is withheld, judgement is passed wisely: to a terminal is given `display`; to a pipe, `tsv`.
+
+## Act I   a table, of the wives of Henry VIII
 
 ```python
 """List the six wives of Henry VIII as a Report.
@@ -70,9 +72,7 @@ if __name__ == "__main__":
     list_wives()
 ```
 
-Thus decorated are options imparted unto thy command: `--as` (which format thou shalt have), `--report` (which reports shall be shown), `--header` / `--no-header` (shall columns have their heads?), and `--detailed` / `--essential` (how copious thy detail?). When `--as` is withheld, judgement is passed wisely: to a terminal is given `display`; to a pipe, `tsv`.
-
-### Scene I   `--as tsv`,   for the devices of UNIX
+### Scene i   `--as tsv`,   for the devices of UNIX
 
 ```
 # Name	Born	Fate
@@ -84,7 +84,7 @@ Catherine Howard	1523	Beheaded
 Catherine Parr	1512	Survived
 ```
 
-### Scene II   `--as json`,   for the contrivances of the web
+### Scene ii   `--as json`,   for the contrivances of the web
 
 ```json
 {
@@ -161,7 +161,7 @@ Catherine Parr	1512	Survived
 }
 ```
 
-### Scene III   `--as display`,   for thine own eye
+### Scene iii   `--as display`,   for thine own eye
 
 ```
                  Wives of Henry VIII                 
@@ -177,6 +177,155 @@ Catherine Parr	1512	Survived
 └─────────────────────┴──────┴──────────┴───────────┘
     Divorced, beheaded, died; divorced, beheaded,    
                       survived.
+```
+
+## Act II   a forest, in the Forest of Arden
+
+The play that begat this library's name turns on two ducal brothers — one exiled to the Forest of Arden, the other a usurper at court — and the daughters of each. Fittingly for trees that grow apart rather than together, a `TreeContent` with two roots: a forest in both the data-structural and the Shakespearean sense.
+
+```python
+"""Families of Shakespeare's *As You Like It* as a Report.
+
+The play from which this library takes its name turns on two ducal
+brothers — one exiled to the Forest of Arden, the other a usurper —
+and the daughters of each. Two trees, one forest.
+"""
+
+import click
+
+from asyoulikeit import (
+    Importance,
+    Report,
+    Reports,
+    TreeContent,
+    report_output,
+)
+
+
+@click.command()
+@report_output
+def list_dukes():
+    """List the ducal families from 'As You Like It'."""
+    tree = (
+        TreeContent(
+            title="Ducal families of 'As You Like It'",
+            description="The two lines around which the play turns.",
+        )
+        .add_column("name", "Name", header=True)
+        .add_column("role", "Role")
+        .add_column("setting", "Setting", importance=Importance.DETAIL)
+    )
+    senior = tree.add_root(
+        name="Duke Senior", role="Exiled duke", setting="Forest of Arden"
+    )
+    senior.add_child(
+        name="Rosalind", role="Heroine", setting="Court and Arden"
+    )
+    frederick = tree.add_root(
+        name="Duke Frederick", role="Usurper", setting="At court"
+    )
+    frederick.add_child(
+        name="Celia", role="Heroine's cousin", setting="Court and Arden"
+    )
+    return Reports(dukes=Report(data=tree))
+
+
+if __name__ == "__main__":
+    list_dukes()
+```
+
+### Scene i   `--as tsv`,   for the devices of UNIX
+
+```
+# Name	Role
+Duke Senior	Exiled duke
+  Rosalind	Heroine
+Duke Frederick	Usurper
+  Celia	Heroine's cousin
+```
+
+### Scene ii   `--as json`,   for the contrivances of the web
+
+```json
+{
+  "tables": {
+    "dukes": {
+      "metadata": {
+        "kind": "tree",
+        "title": "Ducal families of 'As You Like It'",
+        "description": "The two lines around which the play turns."
+      },
+      "columns": [
+        {
+          "key": "name",
+          "label": "Name",
+          "header": true
+        },
+        {
+          "key": "role",
+          "label": "Role",
+          "header": false
+        },
+        {
+          "key": "setting",
+          "label": "Setting",
+          "header": false
+        }
+      ],
+      "roots": [
+        {
+          "values": {
+            "name": "Duke Senior",
+            "role": "Exiled duke",
+            "setting": "Forest of Arden"
+          },
+          "children": [
+            {
+              "values": {
+                "name": "Rosalind",
+                "role": "Heroine",
+                "setting": "Court and Arden"
+              },
+              "children": []
+            }
+          ]
+        },
+        {
+          "values": {
+            "name": "Duke Frederick",
+            "role": "Usurper",
+            "setting": "At court"
+          },
+          "children": [
+            {
+              "values": {
+                "name": "Celia",
+                "role": "Heroine's cousin",
+                "setting": "Court and Arden"
+              },
+              "children": []
+            }
+          ]
+        }
+      ]
+    }
+  }
+}
+```
+
+### Scene iii   `--as display`,   for thine own eye
+
+```
+          Ducal families of 'As You Like It'           
+┏━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━┓
+┃ Name           ┃ Role             ┃ Setting         ┃
+┡━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━┩
+│ Duke Senior    │ Exiled duke      │ Forest of Arden │
+│ └── Rosalind   │ Heroine          │ Court and Arden │
+│ Duke Frederick │ Usurper          │ At court        │
+│ └── Celia      │ Heroine's cousin │ Court and Arden │
+└────────────────┴──────────────────┴─────────────────┘
+      The two lines around which the play turns.
 ```
 
 ## Of the Licence

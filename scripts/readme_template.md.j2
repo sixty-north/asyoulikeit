@@ -17,30 +17,56 @@ Gentle reader, this library doth furnish thy terminal tools with reports most ma
 
 ## Prologue
 
-Take thou a handler that returneth `Reports`, and with `@report_output` do thou dress it thus:
+Take thou a handler that returneth `Reports`, and with `@report_output` do thou dress it. Thus decorated are options imparted unto thy command: `--as` (which format thou shalt have), `--report` (which reports shall be shown), `--header` / `--no-header` (shall columns have their heads?), and `--detailed` / `--essential` (how copious thy detail?). When `--as` is withheld, judgement is passed wisely: to a terminal is given `display`; to a pipe, `tsv`.
+
+## Act I   a table, of the wives of Henry VIII
 
 ```python
-{{ example.source }}
+{{ table_example.source }}
 ```
 
-Thus decorated are options imparted unto thy command: `--as` (which format thou shalt have), `--report` (which reports shall be shown), `--header` / `--no-header` (shall columns have their heads?), and `--detailed` / `--essential` (how copious thy detail?). When `--as` is withheld, judgement is passed wisely: to a terminal is given `display`; to a pipe, `tsv`.
-
-### Scene I   `--as tsv`,   for the devices of UNIX
+### Scene i   `--as tsv`,   for the devices of UNIX
 
 ```
-{{ example.outputs.tsv }}
+{{ table_example.outputs.tsv }}
 ```
 
-### Scene II   `--as json`,   for the contrivances of the web
+### Scene ii   `--as json`,   for the contrivances of the web
 
 ```json
-{{ example.outputs.json }}
+{{ table_example.outputs.json }}
 ```
 
-### Scene III   `--as display`,   for thine own eye
+### Scene iii   `--as display`,   for thine own eye
 
 ```
-{{ example.outputs.display }}
+{{ table_example.outputs.display }}
+```
+
+## Act II   a forest, in the Forest of Arden
+
+The play that begat this library's name turns on two ducal brothers — one exiled to the Forest of Arden, the other a usurper at court — and the daughters of each. Fittingly for trees that grow apart rather than together, a `TreeContent` with two roots: a forest in both the data-structural and the Shakespearean sense.
+
+```python
+{{ tree_example.source }}
+```
+
+### Scene i   `--as tsv`,   for the devices of UNIX
+
+```
+{{ tree_example.outputs.tsv }}
+```
+
+### Scene ii   `--as json`,   for the contrivances of the web
+
+```json
+{{ tree_example.outputs.json }}
+```
+
+### Scene iii   `--as display`,   for thine own eye
+
+```
+{{ tree_example.outputs.display }}
 ```
 
 ## Of the Licence
