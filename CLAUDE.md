@@ -24,6 +24,20 @@ uv run python -c "from aspects.formatter import formatter_names; print(formatter
 
 After editing entry points in `pyproject.toml` (or adding a new formatter package), **re-run `uv sync`** — stevedore reads entry points from installed package metadata, so the in-place install must be rebuilt before `formatter_names()` reflects the change. Failing to do this is the most common reason a newly-added formatter "isn't found".
 
+## Versioning and releases
+
+Version is managed manually via `bump-my-version` (configured in `pyproject.toml` under `[tool.bumpversion]`). The single source of truth is `__version__` in `src/aspects/__init__.py`; setuptools reads it via `[tool.setuptools.dynamic]` and exposes it as the wheel's installed version. Do not edit the version by hand in more than one place — let `bump-my-version` update both the module and the `[tool.bumpversion] current_version` config in lock-step.
+
+Release flow (on a clean working tree, from `main` / `master`):
+
+```bash
+uv run bump-my-version bump --dry-run --verbose patch   # preview: what changes, commit, tag
+uv run bump-my-version bump patch                       # or `minor`, `major` — commits + tags
+git push --follow-tags                                   # publish commit and the v<X.Y.Z> tag
+```
+
+Each real bump produces one commit (`Bump version: X.Y.Z → X.Y.Z+1`) and one annotated tag (`vX.Y.Z+1`). `bump-my-version` refuses to run with a dirty tree, which is the intended safety net.
+
 ## Architecture
 
 ### End-to-end flow
