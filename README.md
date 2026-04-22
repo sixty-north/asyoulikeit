@@ -8,12 +8,12 @@
 
 Gentle reader, this library doth furnish thy terminal tools with reports most manifold: to the machine made glorious by this Son of Jay, to the pipe in honest tabulations, and to thine own eye in fair display — every format, verily, **as thou likest it**.
 
-## Prologue — a Quickstart
+## Prologue
 
 Take thou a handler that returneth a `Reports` object, and with `@tabulated_output` do thou dress it thus:
 
 ```python
-"""Quickstart example: list the six wives of Henry VIII as a Report.
+"""List the six wives of Henry VIII as a Report.
 
 Run this file directly to see the default display format:
 

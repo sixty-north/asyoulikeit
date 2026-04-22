@@ -1,4 +1,4 @@
-"""Quickstart example: list the six wives of Henry VIII as a Report.
+"""List the six wives of Henry VIII as a Report.
 
 Run this file directly to see the default display format:
 
