@@ -181,7 +181,7 @@ Catherine Parr	1512	Survived
 
 ## Act II   two trees, in the forest of Arden
 
-Behold: the play that lent this library its name doth turn upon two brothers of the ducal stamp — one banish'd to the forest of Arden, the other an usurper at court — and upon the daughters each begat. Fitting, surely, that for houses which grow not together but apart, a `TreeContent` here taketh two roots: a forest, in both the data-structural sense and the Shakespearean.
+Behold: the play that lent this library its name doth turn upon two brothers of the ducal stamp — one banish'd to the forest of Arden, the other an usurper at court — and upon the daughters each begat. Fitting, surely, that for houses which grow not together but apart, a `TreeContent` here taketh two roots: a forest in both shape and sense.
 
 ```python
 """Families of Shakespeare's *As You Like It* as a Report.
