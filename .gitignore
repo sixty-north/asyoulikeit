@@ -28,5 +28,4 @@ htmlcov/
 .pyright/
 
 # Editors / IDEs
-.idea/
 .vscode/
