@@ -14,6 +14,12 @@ dist/
 *.egg-info/
 *.egg
 
+# Lock files belong to applications, not libraries. aspects is a
+# library: consumers should resolve their own versions against our
+# declared constraints. Locally-generated uv.lock is fine; don't
+# commit it.
+uv.lock
+
 # Test, coverage, type-check, lint caches
 .pytest_cache/
 .coverage
