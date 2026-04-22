@@ -1,6 +1,6 @@
 """Utilities for enriching CLI tools with structured report output."""
 
-__version__ = "0.2.1"
+__version__ = "0.2.2"
 
 from asyoulikeit.cli import ALL_REPORTS, tabulated_output
 from asyoulikeit.exceptions import AsyoulikeitError
