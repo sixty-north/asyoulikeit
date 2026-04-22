@@ -110,7 +110,7 @@ click.echo(output)
 
 Only three nodes hold real logic: the decorator (`src/asyoulikeit/cli.py`), the dispatch/ABC layer (`src/asyoulikeit/formatter.py`), and each formatter's `format()` method. The rest is data classes.
 
-Client-facing objects (`report_output`, `Report`, `Reports`, `TabularData`, `Column`, `Importance`, `DetailLevel`, `Formatter`, `format_as`, `formatter_names`, `create_formatter`, `ALL_REPORTS`, `AsyoulikeitError`, `Extension`, style-key constants, …) are re-exported from the top-level `asyoulikeit` package — consumers should `from asyoulikeit import ...` rather than reaching into the sub-modules.
+Client-facing objects (`report_output`, `Report`, `Reports`, `TableContent`, `Column`, `Importance`, `DetailLevel`, `Formatter`, `format_as`, `formatter_names`, `create_formatter`, `ALL_REPORTS`, `AsyoulikeitError`, `Extension`, style-key constants, …) are re-exported from the top-level `asyoulikeit` package — consumers should `from asyoulikeit import ...` rather than reaching into the sub-modules.
 
 ### Formatter plug-in packaging (important and non-obvious)
 
@@ -132,7 +132,7 @@ This keeps the entry-point target stable while letting the concrete class name s
 
 Three knobs interact and it's easy to get lost:
 
-1. **Per-column `Importance`** (`ESSENTIAL` / `DETAIL`) — set when defining columns on `TabularData`.
+1. **Per-column `Importance`** (`ESSENTIAL` / `DETAIL`) — set when defining columns on `TableContent`.
 2. **Per-row `Importance`** — passed as the reserved `_importance` kwarg on `add_row`.
 3. **Per-`Report` `DetailLevel`** (`AUTO` / `DETAILED` / `ESSENTIAL`) — the formatting preference the report *suggests*.
 

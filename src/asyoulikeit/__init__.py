@@ -25,7 +25,7 @@ from asyoulikeit.tabular_data import (
     Importance,
     Report,
     Reports,
-    TabularData,
+    TableContent,
 )
 
 __all__ = [
@@ -47,7 +47,7 @@ __all__ = [
     "STYLE_FOREGROUND_COLOR",
     "STYLE_ITALIC",
     "STYLE_WIDTH",
-    "TabularData",
+    "TableContent",
     "create_formatter",
     "format_as",
     "formatter_names",

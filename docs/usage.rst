@@ -37,7 +37,7 @@ there is to it.
 .. code-block:: python
 
    import click
-   from asyoulikeit import Report, Reports, TabularData, report_output
+   from asyoulikeit import Report, Reports, TableContent, report_output
 
 
    @click.command()
@@ -45,7 +45,7 @@ there is to it.
    def list_users():
        """List the users of the system."""
        data = (
-           TabularData(title="Users")
+           TableContent(title="Users")
            .add_column("name", "Name")
            .add_column("role", "Role")
            .add_row(name="Alice", role="admin")
@@ -70,15 +70,15 @@ The data model
 
 Three classes carry all the state.
 
-:class:`~asyoulikeit.TabularData` is a schema-validated table builder.
+:class:`~asyoulikeit.TableContent` is a schema-validated table builder.
 Add columns first, then rows. Every row must supply exactly the columns
 that were declared — missing keys and unexpected keys both raise
-:exc:`ValueError`, which catches typos early. ``TabularData`` also
+:exc:`ValueError`, which catches typos early. ``TableContent`` also
 holds optional ``title`` and ``description`` metadata that some
 formatters display.
 
 :class:`~asyoulikeit.Report` is a frozen dataclass wrapping a
-``TabularData`` plus formatting preferences (``detail_level``,
+``TableContent`` plus formatting preferences (``detail_level``,
 ``header``). These preferences are *suggestions* — the user can
 override them from the command line.
 
@@ -102,7 +102,7 @@ individual rows:
    from asyoulikeit import Importance
 
    data = (
-       TabularData()
+       TableContent()
        .add_column("name", "Name")                                    # ESSENTIAL (the default)
        .add_column("notes", "Notes", importance=Importance.DETAIL)
        .add_row(name="Alice", notes="Joined 2024-03")                 # essential row (the default)
@@ -143,7 +143,7 @@ Transposition
 
 Sometimes a table reads better flipped: columns of values paired with
 a label column on the left rather than a header row on top. Set
-``present_transposed=True`` on ``TabularData`` and the ``display`` and
+``present_transposed=True`` on ``TableContent`` and the ``display`` and
 ``tsv`` formatters will rotate the data at render time. JSON is
 unaffected — it's a structural format, not a visual one, and surfaces
 the intent via a ``metadata.present_transposed`` flag instead.
@@ -153,7 +153,7 @@ Styling
 -------
 
 The ``display`` formatter supports per-cell styling (foreground colour,
-background colour, bold, italic). Attach a second ``TabularData`` to
+background colour, bold, italic). Attach a second ``TableContent`` to
 your ``Report`` via the ``styles`` argument, with the same shape as the
 data table but cell values as dictionaries keyed by
 :data:`~asyoulikeit.STYLE_FOREGROUND_COLOR`,

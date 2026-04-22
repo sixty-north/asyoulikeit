@@ -4,7 +4,7 @@ import json
 import re
 import pytest
 
-from asyoulikeit.tabular_data import TabularData, Reports, Report
+from asyoulikeit.tabular_data import TableContent, Reports, Report
 from asyoulikeit.formatter import (
     create_formatter,
     format_as,
@@ -31,7 +31,7 @@ class TestTSVFormatter:
 
     def test_empty_table(self):
         """TSV formatter should handle empty tables (headers only)."""
-        data = TabularData().add_column("name", "Name")
+        data = TableContent().add_column("name", "Name")
         formatter = create_formatter("tsv")
         result = formatter.format(Reports(data=Report(data=data)))
 
@@ -40,7 +40,7 @@ class TestTSVFormatter:
     def test_single_column_single_row(self):
         """TSV formatter should handle single column, single row."""
         data = (
-            TabularData()
+            TableContent()
             .add_column("name", "Name")
             .add_row(name="Alice")
         )
@@ -54,7 +54,7 @@ class TestTSVFormatter:
     def test_multiple_columns_single_row(self):
         """TSV formatter should handle multiple columns."""
         data = (
-            TabularData()
+            TableContent()
             .add_column("name", "Name")
             .add_column("age", "Age")
             .add_row(name="Alice", age=30)
@@ -69,7 +69,7 @@ class TestTSVFormatter:
     def test_multiple_rows(self):
         """TSV formatter should handle multiple rows."""
         data = (
-            TabularData()
+            TableContent()
             .add_column("name", "Name")
             .add_column("age", "Age")
             .add_row(name="Alice", age=30)
@@ -86,7 +86,7 @@ class TestTSVFormatter:
     def test_values_converted_to_strings(self):
         """TSV formatter should convert all values to strings."""
         data = (
-            TabularData()
+            TableContent()
             .add_column("name", "Name")
             .add_column("active", "Active")
             .add_column("score", "Score")
@@ -105,7 +105,7 @@ class TestJSONFormatter:
 
     def test_empty_table(self):
         """JSON formatter should handle empty tables."""
-        data = TabularData().add_column("name", "Name")
+        data = TableContent().add_column("name", "Name")
         formatter = create_formatter("json")
         result = formatter.format(Reports(data=Report(data=data)))
 
@@ -123,7 +123,7 @@ class TestJSONFormatter:
     def test_single_column_single_row(self):
         """JSON formatter should handle single column, single row."""
         data = (
-            TabularData()
+            TableContent()
             .add_column("name", "Name")
             .add_row(name="Alice")
         )
@@ -145,7 +145,7 @@ class TestJSONFormatter:
     def test_multiple_columns_single_row(self):
         """JSON formatter should handle multiple columns."""
         data = (
-            TabularData()
+            TableContent()
             .add_column("name", "Name")
             .add_column("age", "Age")
             .add_row(name="Alice", age=30)
@@ -171,7 +171,7 @@ class TestJSONFormatter:
     def test_multiple_rows(self):
         """JSON formatter should handle multiple rows."""
         data = (
-            TabularData()
+            TableContent()
             .add_column("name", "Name")
             .add_column("age", "Age")
             .add_row(name="Alice", age=30)
@@ -201,7 +201,7 @@ class TestJSONFormatter:
     def test_json_is_pretty_printed(self):
         """JSON formatter should produce indented output."""
         data = (
-            TabularData()
+            TableContent()
             .add_column("name", "Name")
             .add_row(name="Alice")
         )
@@ -216,7 +216,7 @@ class TestJSONFormatter:
     def test_rows_use_column_keys_not_labels(self):
         """JSON formatter rows should use column keys, with labels in column metadata."""
         data = (
-            TabularData()
+            TableContent()
             .add_column("internal_name", "Display Name")
             .add_column("internal_age", "Age in Years")
             .add_row(internal_name="Alice", internal_age=30)
@@ -246,7 +246,7 @@ class TestFormatAs:
     def test_format_as_tsv(self):
         """format_as should dispatch to TSV formatter."""
         data = (
-            TabularData()
+            TableContent()
             .add_column("x", "X")
             .add_row(x=1)
         )
@@ -257,7 +257,7 @@ class TestFormatAs:
     def test_format_as_json(self):
         """format_as should dispatch to JSON formatter."""
         data = (
-            TabularData()
+            TableContent()
             .add_column("x", "X")
             .add_row(x=1)
         )
@@ -276,14 +276,14 @@ class TestFormatAs:
 
     def test_format_as_unknown_format(self):
         """format_as should raise FormatterExtensionError for unknown format."""
-        data = TabularData().add_column("x", "X")
+        data = TableContent().add_column("x", "X")
 
         with pytest.raises(FormatterExtensionError, match="Unknown format 'xml'"):
             format_as(Reports(data=Report(data=data)), "xml")
 
     def test_format_as_error_shows_available_formats(self):
         """Error message should list available formats."""
-        data = TabularData().add_column("x", "X")
+        data = TableContent().add_column("x", "X")
 
         with pytest.raises(FormatterExtensionError, match="Available: display, json, tsv"):
             format_as(Reports(data=Report(data=data)), "xml")
@@ -295,7 +295,7 @@ class TestTSVFormatterTranspose:
     def test_tsv_transpose_with_header_column(self):
         """TSV should transpose output when present_transposed is True with header column."""
         data = (
-            TabularData(present_transposed=True)
+            TableContent(present_transposed=True)
             .add_column("category", "Category", header=True)
             .add_column("apples", "Apples")
             .add_column("oranges", "Oranges")
@@ -312,7 +312,7 @@ class TestTSVFormatterTranspose:
     def test_tsv_transpose_without_header_column(self):
         """TSV should transpose output using row indices when no header column."""
         data = (
-            TabularData(present_transposed=True)
+            TableContent(present_transposed=True)
             .add_column("name", "Name")
             .add_column("age", "Age")
             .add_row(name="Alice", age=30)
@@ -328,7 +328,7 @@ class TestTSVFormatterTranspose:
     def test_tsv_no_transpose_when_flag_false(self):
         """TSV should not transpose when present_transposed is False."""
         data = (
-            TabularData(present_transposed=False)
+            TableContent(present_transposed=False)
             .add_column("name", "Name")
             .add_column("age", "Age")
             .add_row(name="Alice", age=30)
@@ -344,7 +344,7 @@ class TestTSVFormatterTranspose:
     def test_tsv_transpose_quarterly_metrics(self):
         """TSV transpose works well for quarterly metrics presentation."""
         data = (
-            TabularData(present_transposed=True)
+            TableContent(present_transposed=True)
             .add_column("metric", "Metric", header=True)
             .add_column("q1", "Q1 2024")
             .add_column("q2", "Q2 2024")
@@ -365,7 +365,7 @@ class TestJSONFormatterMetadata:
     def test_json_includes_metadata_with_title_and_description(self):
         """JSON output should include metadata with title and description."""
         data = (
-            TabularData(title="User Report", description="Active users in the system")
+            TableContent(title="User Report", description="Active users in the system")
             .add_column("name", "Name")
             .add_row(name="Alice")
         )
@@ -381,7 +381,7 @@ class TestJSONFormatterMetadata:
     def test_json_includes_metadata_with_null_values(self):
         """JSON output should include null metadata when not provided."""
         data = (
-            TabularData()
+            TableContent()
             .add_column("name", "Name")
             .add_row(name="Alice")
         )
@@ -399,7 +399,7 @@ class TestJSONFormatterMetadata:
     def test_json_includes_present_transposed_flag(self):
         """JSON output should include present_transposed in metadata."""
         data = (
-            TabularData(present_transposed=True)
+            TableContent(present_transposed=True)
             .add_column("name", "Name")
             .add_row(name="Alice")
         )
@@ -413,7 +413,7 @@ class TestJSONFormatterMetadata:
     def test_json_includes_header_flag_on_columns(self):
         """JSON output should include header flag on each column."""
         data = (
-            TabularData()
+            TableContent()
             .add_column("category", "Category", header=True)
             .add_column("value", "Value")
             .add_row(category="Apples", value=10)
@@ -429,7 +429,7 @@ class TestJSONFormatterMetadata:
     def test_json_does_not_transpose_data(self):
         """JSON output should not transpose data even when present_transposed is True."""
         data = (
-            TabularData(present_transposed=True)
+            TableContent(present_transposed=True)
             .add_column("name", "Name")
             .add_column("age", "Age")
             .add_row(name="Alice", age=30)
@@ -452,7 +452,7 @@ class TestDisplayFormatter:
 
     def test_empty_table(self):
         """Display formatter should handle empty tables."""
-        data = TabularData().add_column("name", "Name")
+        data = TableContent().add_column("name", "Name")
         formatter = create_formatter("display")
         result = formatter.format(Reports(data=Report(data=data)))
 
@@ -465,7 +465,7 @@ class TestDisplayFormatter:
     def test_single_column_single_row(self):
         """Display formatter should handle single column, single row."""
         data = (
-            TabularData()
+            TableContent()
             .add_column("name", "Name")
             .add_row(name="Alice")
         )
@@ -480,7 +480,7 @@ class TestDisplayFormatter:
     def test_multiple_columns_and_rows(self):
         """Display formatter should handle multiple columns and rows."""
         data = (
-            TabularData()
+            TableContent()
             .add_column("name", "Name")
             .add_column("age", "Age")
             .add_row(name="Alice", age=30)
@@ -501,7 +501,7 @@ class TestDisplayFormatter:
     def test_display_with_title(self):
         """Display formatter should include title."""
         data = (
-            TabularData(title="User Report")
+            TableContent(title="User Report")
             .add_column("name", "Name")
             .add_row(name="Alice")
         )
@@ -515,7 +515,7 @@ class TestDisplayFormatter:
     def test_display_with_description(self):
         """Display formatter should include description as caption."""
         data = (
-            TabularData(description="Active users")
+            TableContent(description="Active users")
             .add_column("name", "Name")
             .add_row(name="Alice")
         )
@@ -529,7 +529,7 @@ class TestDisplayFormatter:
     def test_display_with_title_and_description(self):
         """Display formatter should include both title and description."""
         data = (
-            TabularData(title="User Report", description="Active users in the system")
+            TableContent(title="User Report", description="Active users in the system")
             .add_column("name", "Name")
             .add_row(name="Alice")
         )
@@ -544,7 +544,7 @@ class TestDisplayFormatter:
     def test_display_with_header_column(self):
         """Display formatter should style header column."""
         data = (
-            TabularData()
+            TableContent()
             .add_column("category", "Category", header=True)
             .add_column("value", "Value")
             .add_row(category="Apples", value=10)
@@ -561,7 +561,7 @@ class TestDisplayFormatter:
     def test_display_transposed_with_header_column(self):
         """Display formatter should transpose with header column values as headers."""
         data = (
-            TabularData(present_transposed=True)
+            TableContent(present_transposed=True)
             .add_column("category", "Category", header=True)
             .add_column("apples", "Apples")
             .add_column("oranges", "Oranges")
@@ -586,7 +586,7 @@ class TestDisplayFormatter:
     def test_display_transposed_without_header_column(self):
         """Display formatter should transpose using row indices when no header column."""
         data = (
-            TabularData(present_transposed=True)
+            TableContent(present_transposed=True)
             .add_column("name", "Name")
             .add_column("age", "Age")
             .add_row(name="Alice", age=30)
@@ -611,7 +611,7 @@ class TestDisplayFormatter:
     def test_display_quarterly_metrics(self):
         """Display formatter should handle quarterly metrics beautifully."""
         data = (
-            TabularData(
+            TableContent(
                 title="Quarterly Metrics",
                 description="Financial performance Q1-Q2 2024",
                 present_transposed=True
@@ -650,7 +650,7 @@ class TestFormatterIntegration:
     def test_color_table_as_tsv(self):
         """Test formatting color data as TSV."""
         data = (
-            TabularData()
+            TableContent()
             .add_column("color_name", "Color Name")
             .add_column("color_hex", "Color Hex")
             .add_column("complementary_color_name", "Complementary Color Name")
@@ -679,7 +679,7 @@ class TestFormatterIntegration:
     def test_color_table_as_json(self):
         """Test formatting color data as JSON."""
         data = (
-            TabularData()
+            TableContent()
             .add_column("color_name", "Color Name")
             .add_column("color_hex", "Color Hex")
             .add_column("complementary_color_name", "Complementary Color Name")

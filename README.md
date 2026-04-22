@@ -38,7 +38,7 @@ from asyoulikeit import (
     Importance,
     Report,
     Reports,
-    TabularData,
+    TableContent,
     report_output,
 )
 
@@ -48,7 +48,7 @@ from asyoulikeit import (
 def list_wives():
     """List the six wives of Henry VIII."""
     data = (
-        TabularData(
+        TableContent(
             title="Wives of Henry VIII",
             description="Divorced, beheaded, died; divorced, beheaded, survived.",
         )

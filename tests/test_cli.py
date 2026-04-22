@@ -17,14 +17,14 @@ from asyoulikeit.tabular_data import (
     Importance,
     Report,
     Reports,
-    TabularData,
+    TableContent,
 )
 
 
 def _make_people_reports() -> Reports:
     """A Reports with two named reports and a mix of importance tags."""
     people = (
-        TabularData()
+        TableContent()
         .add_column("name", "Name")
         .add_column("age", "Age")
         .add_column("notes", "Notes", importance=Importance.DETAIL)
@@ -32,7 +32,7 @@ def _make_people_reports() -> Reports:
         .add_row(name="Bob", age=25, notes="detail row", _importance=Importance.DETAIL)
     )
     colors = (
-        TabularData()
+        TableContent()
         .add_column("color", "Color")
         .add_row(color="red")
         .add_row(color="green")
@@ -101,7 +101,7 @@ class TestSmartDefaultFormat:
         @click.command()
         @report_output
         def cmd():
-            data = TabularData().add_column("x", "X").add_row(x=1)
+            data = TableContent().add_column("x", "X").add_row(x=1)
             return Reports(only=Report(data=data))
 
         result = CliRunner().invoke(cmd, [])
@@ -124,7 +124,7 @@ class TestSmartDefaultFormat:
         @click.command()
         @report_output
         def cmd():
-            data = TabularData().add_column("x", "X").add_row(x=1)
+            data = TableContent().add_column("x", "X").add_row(x=1)
             return Reports(only=Report(data=data))
 
         result = CliRunner().invoke(cmd, [])
@@ -141,7 +141,7 @@ class TestHeaderToggle:
         @click.command()
         @report_output
         def cmd():
-            data = TabularData().add_column("x", "X").add_row(x=1)
+            data = TableContent().add_column("x", "X").add_row(x=1)
             return Reports(only=Report(data=data))
 
         result = CliRunner().invoke(cmd, ["--as", "tsv"])
@@ -151,7 +151,7 @@ class TestHeaderToggle:
         @click.command()
         @report_output
         def cmd():
-            data = TabularData().add_column("x", "X").add_row(x=1)
+            data = TableContent().add_column("x", "X").add_row(x=1)
             return Reports(only=Report(data=data))
 
         result = CliRunner().invoke(cmd, ["--as", "tsv", "--no-header"])
@@ -325,7 +325,7 @@ class TestReportOverrides:
         @click.command()
         @report_output
         def cmd():
-            data = TabularData().add_column("x", "X").add_row(x=1)
+            data = TableContent().add_column("x", "X").add_row(x=1)
             return Reports(only=Report(data=data, header=True))
 
         result = CliRunner().invoke(cmd, ["--as", "tsv", "--no-header"])
@@ -338,7 +338,7 @@ class TestReportOverrides:
         @report_output
         def cmd():
             data = (
-                TabularData()
+                TableContent()
                 .add_column("name", "Name")
                 .add_column("note", "Note", importance=Importance.DETAIL)
                 .add_row(name="Alice", note="hello")

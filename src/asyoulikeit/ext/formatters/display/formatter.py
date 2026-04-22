@@ -33,7 +33,7 @@ class DisplayFormatter(Formatter):
     presentation.
 
     Multiple tables are separated by blank lines. Each table uses its own
-    TabularData metadata (title/description).
+    TableContent metadata (title/description).
     """
 
     def format(self, reports: Reports) -> str:

@@ -14,7 +14,7 @@ from asyoulikeit.content import ReportContent
 
 
 # Style property keys for cell formatting
-# These keys are used in style dictionaries within cells of a styles TabularData instance
+# These keys are used in style dictionaries within cells of a styles TableContent instance
 STYLE_FOREGROUND_COLOR = "foreground_color"  # Hex color string, e.g., "#FFFFFF"
 STYLE_BACKGROUND_COLOR = "background_color"  # Hex color string, e.g., "#0066CC"
 STYLE_BOLD = "bold"                          # Boolean
@@ -63,17 +63,17 @@ class Column:
     importance: Importance = Importance.ESSENTIAL
 
 
-class TabularData(ReportContent):
+class TableContent(ReportContent):
     """Container for tabular data with schema validation.
 
-    TabularData enforces that all rows match a defined column schema,
+    TableContent enforces that all rows match a defined column schema,
     providing a builder-style API for constructing tables programmatically.
 
     Example:
 
         .. code-block:: python
 
-            data = TabularData(title="User List", description="Active users in the system")
+            data = TableContent(title="User List", description="Active users in the system")
             data.add_column("name", "Name")
             data.add_column("age", "Age")
             data.add_row(name="Alice", age=30)
@@ -90,7 +90,7 @@ class TabularData(ReportContent):
         description: Optional[str] = None,
         present_transposed: bool = False
     ):
-        """Initialize a TabularData instance with optional metadata.
+        """Initialize a TableContent instance with optional metadata.
 
         Args:
             title: Optional title for the table
@@ -107,8 +107,8 @@ class TabularData(ReportContent):
 
     @classmethod
     def kind(cls) -> str:
-        """Return the :class:`ReportContent` kind identifier: ``"tabular"``."""
-        return "tabular"
+        """Return the :class:`ReportContent` kind identifier: ``"table"``."""
+        return "table"
 
     @classmethod
     def from_mappings(
@@ -117,8 +117,8 @@ class TabularData(ReportContent):
         title: Optional[str] = None,
         description: Optional[str] = None,
         present_transposed: bool = False
-    ) -> "TabularData":
-        """Create TabularData from an iterable of mappings (e.g., list of dicts).
+    ) -> "TableContent":
+        """Create TableContent from an iterable of mappings (e.g., list of dicts).
 
         Columns are inferred from the union of all keys across all mappings.
         Column keys and labels will be identical. Missing keys in individual
@@ -134,7 +134,7 @@ class TabularData(ReportContent):
             present_transposed: Whether to present transposed
 
         Returns:
-            A new TabularData instance
+            A new TableContent instance
 
         Raises:
             ValueError: If any key is not a valid Python identifier
@@ -143,7 +143,7 @@ class TabularData(ReportContent):
 
             .. code-block:: python
 
-                data = TabularData.from_mappings([
+                data = TableContent.from_mappings([
                     {"name": "Alice", "age": 30},
                     {"name": "Bob", "age": 25, "city": "NYC"}
                 ])
@@ -190,7 +190,7 @@ class TabularData(ReportContent):
         label: str,
         header: bool = False,
         importance: Importance = Importance.ESSENTIAL
-    ) -> "TabularData":
+    ) -> "TableContent":
         """Add a column definition to the schema.
 
         Columns must be added before any rows. This method uses the builder
@@ -230,7 +230,7 @@ class TabularData(ReportContent):
         self._columns[key] = Column(key=key, label=label, header=header, importance=importance)
         return self
 
-    def add_row(self, *, _importance: Importance = Importance.ESSENTIAL, **values: Any) -> "TabularData":
+    def add_row(self, *, _importance: Importance = Importance.ESSENTIAL, **values: Any) -> "TableContent":
         """Add a data row with strict validation.
 
         All defined columns must be present in the row, and no extra columns
@@ -406,10 +406,10 @@ class TabularData(ReportContent):
     def transpose(
         self,
         value_column_importance: Importance = Importance.ESSENTIAL
-    ) -> "TabularData":
+    ) -> "TableContent":
         """Transpose rows and columns.
 
-        Returns a new TabularData with rows and columns swapped. The header
+        Returns a new TableContent with rows and columns swapped. The header
         column (if present) becomes the column labels of the transposed data,
         and the original column labels become the first column of the transposed
         data (marked as header).
@@ -425,9 +425,9 @@ class TabularData(ReportContent):
                 table. Defaults to ESSENTIAL (safe for machine-readable output).
 
         Returns:
-            A new transposed TabularData with present_transposed=False
+            A new transposed TableContent with present_transposed=False
         """
-        transposed = TabularData(
+        transposed = TableContent(
             title=self.title,
             description=self.description,
             present_transposed=False  # We're doing the actual transposition
@@ -465,8 +465,8 @@ class TabularData(ReportContent):
 
         return transposed
 
-    def is_compatible(self, other: "TabularData") -> bool:
-        """Check if another TabularData has compatible structure.
+    def is_compatible(self, other: "TableContent") -> bool:
+        """Check if another TableContent has compatible structure.
 
         Compatibility requires:
         - Same number of columns
@@ -476,7 +476,7 @@ class TabularData(ReportContent):
         Note: Column labels are NOT checked (styles may use different labels)
 
         Args:
-            other: Another TabularData instance to compare
+            other: Another TableContent instance to compare
 
         Returns:
             True if structures are compatible, False otherwise
@@ -494,7 +494,7 @@ class TabularData(ReportContent):
         return True
 
 
-def validate_styles_compatibility(data: TabularData, styles: TabularData) -> None:
+def validate_styles_compatibility(data: TableContent, styles: TableContent) -> None:
     """Verify styles table is compatible with data table.
 
     Args:
@@ -535,15 +535,15 @@ class Report:
 
     Attributes:
         data: The content of this report (a :class:`ReportContent` subclass;
-            currently always a :class:`TabularData`)
+            currently always a :class:`TableContent`)
         styles: Optional styling information with same structure as data
-        title: Optional title for the report (may differ from TabularData title)
-        description: Optional description (may differ from TabularData description)
+        title: Optional title for the report (may differ from TableContent title)
+        description: Optional description (may differ from TableContent description)
         detail_level: Default detail level for this report (can be overridden by CLI)
         header: Whether to include headers by default (can be overridden by CLI)
     """
     data: ReportContent
-    styles: Optional[TabularData] = None
+    styles: Optional[TableContent] = None
     title: Optional[str] = None
     description: Optional[str] = None
     detail_level: DetailLevel = DetailLevel.AUTO

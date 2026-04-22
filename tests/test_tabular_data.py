@@ -1,8 +1,8 @@
-"""Tests for TabularData class."""
+"""Tests for TableContent class."""
 
 import pytest
 
-from asyoulikeit.tabular_data import TabularData, Column, Importance
+from asyoulikeit.tabular_data import TableContent, Column, Importance
 
 
 class TestColumn:
@@ -15,29 +15,29 @@ class TestColumn:
             column.key = "different"
 
 
-class TestTabularDataConstruction:
-    """Tests for TabularData construction and basic operations."""
+class TestTableContentConstruction:
+    """Tests for TableContent construction and basic operations."""
 
     def test_add_column_returns_self(self):
         """add_column should return self for method chaining."""
-        data = TabularData()
+        data = TableContent()
         result = data.add_column("name", "Name")
         assert result is data
 
     def test_columns_are_immutable_tuple(self):
         """columns property should return immutable tuple."""
-        data = TabularData().add_column("name", "Name")
+        data = TableContent().add_column("name", "Name")
         assert isinstance(data.columns, tuple)
 
     def test_cannot_add_duplicate_column(self):
         """Should raise error when adding duplicate column key."""
-        data = TabularData().add_column("name", "Name")
+        data = TableContent().add_column("name", "Name")
         with pytest.raises(ValueError, match="Column 'name' already defined"):
             data.add_column("name", "Name Again")
 
     def test_cannot_add_columns_after_rows(self):
         """Should raise error when adding columns after rows have been added."""
-        data = TabularData()
+        data = TableContent()
         data.add_column("name", "Name")
         data.add_row(name="Alice")
 
@@ -46,7 +46,7 @@ class TestTabularDataConstruction:
 
     def test_column_key_must_be_valid_identifier(self):
         """Column keys must be valid Python identifiers."""
-        data = TabularData()
+        data = TableContent()
 
         # Should reject keys with spaces
         with pytest.raises(ValueError, match="must be a valid Python identifier"):
@@ -69,18 +69,18 @@ class TestTabularDataConstruction:
         data.add_column("CamelCase", "Camel Case")  # Should not raise
 
 
-class TestTabularDataRows:
-    """Tests for adding rows to TabularData."""
+class TestTableContentRows:
+    """Tests for adding rows to TableContent."""
 
     def test_cannot_add_row_before_columns(self):
         """Should raise error when adding rows before defining columns."""
-        data = TabularData()
+        data = TableContent()
         with pytest.raises(ValueError, match="Must define columns before adding rows"):
             data.add_row(name="Alice")
 
     def test_missing_column_raises_error(self):
         """Should raise error when row is missing required columns."""
-        data = TabularData()
+        data = TableContent()
         data.add_column("name", "Name")
         data.add_column("age", "Age")
 
@@ -89,7 +89,7 @@ class TestTabularDataRows:
 
     def test_extra_column_raises_error(self):
         """User requirement: extra keys must be an error, not ignored."""
-        data = TabularData()
+        data = TableContent()
         data.add_column("name", "Name")
 
         with pytest.raises(ValueError, match="Row contains unexpected columns: \\['age'\\]"):
@@ -97,7 +97,7 @@ class TestTabularDataRows:
 
     def test_multiple_extra_columns_raises_error(self):
         """Should raise error listing all unexpected columns."""
-        data = TabularData()
+        data = TableContent()
         data.add_column("name", "Name")
 
         with pytest.raises(ValueError, match="Row contains unexpected columns: \\['age', 'city'\\]"):
@@ -105,7 +105,7 @@ class TestTabularDataRows:
 
     def test_add_row_with_exact_columns(self):
         """Should successfully add row with exact column match."""
-        data = TabularData()
+        data = TableContent()
         data.add_column("name", "Name")
         data.add_column("age", "Age")
         data.add_row(name="Alice", age=30)
@@ -115,26 +115,26 @@ class TestTabularDataRows:
 
     def test_add_row_returns_self(self):
         """add_row should return self for method chaining."""
-        data = TabularData()
+        data = TableContent()
         data.add_column("name", "Name")
         result = data.add_row(name="Alice")
         assert result is data
 
     def test_rows_are_immutable_tuple(self):
         """rows property should return immutable tuple."""
-        data = TabularData()
+        data = TableContent()
         data.add_column("name", "Name")
         data.add_row(name="Alice")
         assert isinstance(data.rows, tuple)
 
 
-class TestTabularDataMethodChaining:
+class TestTableContentMethodChaining:
     """Tests for method chaining fluent API."""
 
     def test_fluent_api_column_chaining(self):
         """Should be able to chain multiple add_column calls."""
         data = (
-            TabularData()
+            TableContent()
             .add_column("name", "Name")
             .add_column("age", "Age")
             .add_column("city", "City")
@@ -145,7 +145,7 @@ class TestTabularDataMethodChaining:
     def test_fluent_api_row_chaining(self):
         """Should be able to chain multiple add_row calls."""
         data = (
-            TabularData()
+            TableContent()
             .add_column("name", "Name")
             .add_column("age", "Age")
             .add_row(name="Alice", age=30)
@@ -158,7 +158,7 @@ class TestTabularDataMethodChaining:
     def test_fluent_api_full_workflow(self):
         """Should be able to chain entire workflow."""
         data = (
-            TabularData()
+            TableContent()
             .add_column("name", "Name")
             .add_column("age", "Age")
             .add_row(name="Alice", age=30)
@@ -171,12 +171,12 @@ class TestTabularDataMethodChaining:
         assert data.rows[1]["name"] == "Bob"
 
 
-class TestTabularDataColumnOrdering:
+class TestTableContentColumnOrdering:
     """Tests for column ordering behavior."""
 
     def test_columns_maintain_insertion_order(self):
         """Columns should maintain the order they were added."""
-        data = TabularData()
+        data = TableContent()
         data.add_column("first", "First")
         data.add_column("second", "Second")
         data.add_column("third", "Third")
@@ -186,7 +186,7 @@ class TestTabularDataColumnOrdering:
 
     def test_row_values_follow_column_order(self):
         """Row dictionary iteration should follow column definition order."""
-        data = TabularData()
+        data = TableContent()
         data.add_column("name", "Name")
         data.add_column("age", "Age")
         data.add_column("city", "City")
@@ -198,35 +198,35 @@ class TestTabularDataColumnOrdering:
         assert values == ["Alice", 30, "NYC"]
 
 
-class TestTabularDataMetadata:
+class TestTableContentMetadata:
     """Tests for table metadata (title and description)."""
 
     def test_default_metadata_is_none(self):
         """Title and description should default to None."""
-        data = TabularData()
+        data = TableContent()
         assert data.title is None
         assert data.description is None
 
     def test_default_present_transposed_is_false(self):
         """present_transposed should default to False."""
-        data = TabularData()
+        data = TableContent()
         assert data.present_transposed is False
 
     def test_title_only(self):
         """Can set title without description."""
-        data = TabularData(title="My Table")
+        data = TableContent(title="My Table")
         assert data.title == "My Table"
         assert data.description is None
 
     def test_description_only(self):
         """Can set description without title."""
-        data = TabularData(description="This is a table of users")
+        data = TableContent(description="This is a table of users")
         assert data.title is None
         assert data.description == "This is a table of users"
 
     def test_title_and_description(self):
         """Can set both title and description."""
-        data = TabularData(
+        data = TableContent(
             title="User Report",
             description="Active users in the system"
         )
@@ -235,7 +235,7 @@ class TestTabularDataMetadata:
 
     def test_metadata_persists_after_adding_columns_and_rows(self):
         """Metadata should remain accessible after building table."""
-        data = TabularData(
+        data = TableContent(
             title="Test Table",
             description="Test description"
         )
@@ -247,12 +247,12 @@ class TestTabularDataMetadata:
 
     def test_can_set_present_transposed(self):
         """Can set present_transposed flag on construction."""
-        data = TabularData(present_transposed=True)
+        data = TableContent(present_transposed=True)
         assert data.present_transposed is True
 
     def test_can_set_all_metadata_together(self):
         """Can set title, description, and present_transposed together."""
-        data = TabularData(
+        data = TableContent(
             title="Test Table",
             description="Test description",
             present_transposed=True
@@ -262,19 +262,19 @@ class TestTabularDataMetadata:
         assert data.present_transposed is True
 
 
-class TestTabularDataHeaderColumn:
+class TestTableContentHeaderColumn:
     """Tests for header column functionality (row labels)."""
 
     def test_header_column_defaults_to_false(self):
         """Column header flag should default to False."""
-        data = TabularData()
+        data = TableContent()
         data.add_column("name", "Name")
 
         assert data.columns[0].header is False
 
     def test_can_mark_first_column_as_header(self):
         """Should be able to mark the first column as a header column."""
-        data = TabularData()
+        data = TableContent()
         data.add_column("label", "Label", header=True)
         data.add_column("value", "Value")
 
@@ -283,7 +283,7 @@ class TestTabularDataHeaderColumn:
 
     def test_cannot_mark_second_column_as_header(self):
         """Should raise error when trying to mark non-first column as header."""
-        data = TabularData()
+        data = TableContent()
         data.add_column("first", "First")
 
         with pytest.raises(ValueError, match="Header column must be the first column"):
@@ -291,7 +291,7 @@ class TestTabularDataHeaderColumn:
 
     def test_cannot_mark_third_column_as_header(self):
         """Should raise error when trying to mark third column as header."""
-        data = TabularData()
+        data = TableContent()
         data.add_column("first", "First")
         data.add_column("second", "Second")
 
@@ -300,7 +300,7 @@ class TestTabularDataHeaderColumn:
 
     def test_header_column_property_returns_header_column(self):
         """header_column property should return the header column if one exists."""
-        data = TabularData()
+        data = TableContent()
         data.add_column("label", "Label", header=True)
         data.add_column("value", "Value")
 
@@ -312,7 +312,7 @@ class TestTabularDataHeaderColumn:
 
     def test_header_column_property_returns_none_when_no_header(self):
         """header_column property should return None when no header column exists."""
-        data = TabularData()
+        data = TableContent()
         data.add_column("name", "Name")
         data.add_column("age", "Age")
 
@@ -320,7 +320,7 @@ class TestTabularDataHeaderColumn:
 
     def test_header_column_works_with_rows(self):
         """Header column should work normally when adding rows."""
-        data = TabularData()
+        data = TableContent()
         data.add_column("category", "Category", header=True)
         data.add_column("count", "Count")
         data.add_row(category="Apples", count=10)
@@ -335,14 +335,14 @@ class TestColumnImportance:
 
     def test_column_importance_defaults_to_essential(self):
         """Columns should default to ESSENTIAL importance."""
-        data = TabularData()
+        data = TableContent()
         data.add_column("name", "Name")
 
         assert data.columns[0].importance == Importance.ESSENTIAL
 
     def test_can_mark_column_as_detail(self):
         """Should be able to mark a column as DETAIL."""
-        data = TabularData()
+        data = TableContent()
         data.add_column("name", "Name", importance=Importance.ESSENTIAL)
         data.add_column("notes", "Notes", importance=Importance.DETAIL)
 
@@ -351,14 +351,14 @@ class TestColumnImportance:
 
     def test_header_column_cannot_be_detail(self):
         """Header columns must be ESSENTIAL."""
-        data = TabularData()
+        data = TableContent()
 
         with pytest.raises(ValueError, match="Header columns must be ESSENTIAL"):
             data.add_column("label", "Label", header=True, importance=Importance.DETAIL)
 
     def test_essential_columns_property(self):
         """essential_columns should return only ESSENTIAL columns."""
-        data = TabularData()
+        data = TableContent()
         data.add_column("name", "Name", importance=Importance.ESSENTIAL)
         data.add_column("age", "Age", importance=Importance.ESSENTIAL)
         data.add_column("notes", "Notes", importance=Importance.DETAIL)
@@ -371,7 +371,7 @@ class TestColumnImportance:
 
     def test_detailed_columns_property(self):
         """detailed_columns should return only DETAIL columns."""
-        data = TabularData()
+        data = TableContent()
         data.add_column("name", "Name", importance=Importance.ESSENTIAL)
         data.add_column("age", "Age", importance=Importance.ESSENTIAL)
         data.add_column("notes", "Notes", importance=Importance.DETAIL)
@@ -384,7 +384,7 @@ class TestColumnImportance:
 
     def test_essential_columns_empty_when_none_exist(self):
         """essential_columns should return empty tuple when no ESSENTIAL columns exist."""
-        data = TabularData()
+        data = TableContent()
         data.add_column("notes", "Notes", importance=Importance.DETAIL)
         data.add_column("bio", "Bio", importance=Importance.DETAIL)
 
@@ -393,7 +393,7 @@ class TestColumnImportance:
 
     def test_detailed_columns_empty_when_none_exist(self):
         """detailed_columns should return empty tuple when no DETAIL columns exist."""
-        data = TabularData()
+        data = TableContent()
         data.add_column("name", "Name", importance=Importance.ESSENTIAL)
         data.add_column("age", "Age", importance=Importance.ESSENTIAL)
 
@@ -402,7 +402,7 @@ class TestColumnImportance:
 
     def test_columns_maintain_order_regardless_of_importance(self):
         """Columns should maintain insertion order regardless of importance."""
-        data = TabularData()
+        data = TableContent()
         data.add_column("first", "First", importance=Importance.DETAIL)
         data.add_column("second", "Second", importance=Importance.ESSENTIAL)
         data.add_column("third", "Third", importance=Importance.DETAIL)
@@ -413,7 +413,7 @@ class TestColumnImportance:
 
     def test_importance_works_with_rows(self):
         """Column importance should work normally when adding rows."""
-        data = TabularData()
+        data = TableContent()
         data.add_column("name", "Name", importance=Importance.ESSENTIAL)
         data.add_column("notes", "Notes", importance=Importance.DETAIL)
         data.add_row(name="Alice", notes="Test note")
@@ -427,7 +427,7 @@ class TestTransposeWithImportance:
 
     def test_transpose_defaults_value_columns_to_essential(self):
         """Transposed value columns should default to ESSENTIAL."""
-        data = TabularData()
+        data = TableContent()
         data.add_column("label", "Label", header=True)
         data.add_column("value", "Value")
         data.add_row(label="Row1", value=10)
@@ -445,7 +445,7 @@ class TestTransposeWithImportance:
 
     def test_transpose_can_set_value_columns_to_detail(self):
         """Should be able to set value columns as DETAIL in transpose."""
-        data = TabularData()
+        data = TableContent()
         data.add_column("label", "Label", header=True)
         data.add_column("value", "Value")
         data.add_row(label="Row1", value=10)
@@ -463,7 +463,7 @@ class TestTransposeWithImportance:
 
     def test_transpose_preserves_data_regardless_of_importance(self):
         """Transpose should preserve data structure regardless of importance settings."""
-        data = TabularData()
+        data = TableContent()
         data.add_column("category", "Category", header=True)
         data.add_column("count", "Count")
         data.add_row(category="Apples", count=10)
@@ -483,7 +483,7 @@ class TestTransposeWithImportance:
 
     def test_transpose_original_column_importance_not_preserved(self):
         """Original column importance is not preserved through transpose."""
-        data = TabularData()
+        data = TableContent()
         data.add_column("label", "Label", header=True, importance=Importance.ESSENTIAL)
         data.add_column("essential_col", "Essential", importance=Importance.ESSENTIAL)
         data.add_column("detail_col", "Detail", importance=Importance.DETAIL)

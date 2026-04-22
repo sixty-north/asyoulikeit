@@ -1,7 +1,7 @@
 """Abstract base for report content.
 
 A :class:`Report` holds one :class:`ReportContent` value (currently always a
-:class:`~asyoulikeit.TabularData` — trees and other kinds are planned).
+:class:`~asyoulikeit.TableContent` — trees and other kinds are planned).
 Formatters iterate reports and dispatch on the concrete content type to
 render each appropriately.
 
@@ -18,7 +18,7 @@ from abc import ABC, abstractmethod
 class ReportContent(ABC):
     """Marker base class for the content carried by a :class:`Report`.
 
-    Every concrete content kind (currently :class:`TabularData`) inherits
+    Every concrete content kind (currently :class:`TableContent`) inherits
     from this class and declares a stable short identifier via
     :meth:`kind`. Formatters use the identifier — or an ``isinstance``
     check — to pick an appropriate rendering path.
@@ -30,6 +30,6 @@ class ReportContent(ABC):
         """A short, stable identifier for this content kind.
 
         Returns:
-            A token like ``"tabular"`` or (in future) ``"tree"``. Used by
+            A token like ``"table"`` or (in future) ``"tree"``. Used by
             formatters and tooling to dispatch on content type.
         """
