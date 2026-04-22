@@ -11,7 +11,7 @@ import click
 import pytest
 from click.testing import CliRunner
 
-from aspects.cli.output import ALL_REPORTS, tabulated_output
+from aspects.cli import ALL_REPORTS, tabulated_output
 from aspects.tabular_data import (
     DetailLevel,
     Importance,
@@ -119,7 +119,7 @@ class TestSmartDefaultFormat:
         fake_sys = types.SimpleNamespace(
             stdout=types.SimpleNamespace(isatty=lambda: True)
         )
-        monkeypatch.setattr("aspects.cli.output.sys", fake_sys)
+        monkeypatch.setattr("aspects.cli.sys", fake_sys)
 
         @click.command()
         @tabulated_output

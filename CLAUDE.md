@@ -38,7 +38,9 @@ aspects.formatter.format_as(reports, format_name)
 click.echo(output)
 ```
 
-Only three nodes hold real logic: the decorator (`src/aspects/cli/output.py`), the dispatch/ABC layer (`src/aspects/formatter.py`), and each formatter's `format()` method. The rest is data classes.
+Only three nodes hold real logic: the decorator (`src/aspects/cli.py`), the dispatch/ABC layer (`src/aspects/formatter.py`), and each formatter's `format()` method. The rest is data classes.
+
+Client-facing objects (`tabulated_output`, `Report`, `Reports`, `TabularData`, `Column`, `Importance`, `DetailLevel`, `Formatter`, `format_as`, `formatter_names`, `create_formatter`, `ALL_REPORTS`, `AspectsError`, `Extension`, style-key constants, …) are re-exported from the top-level `aspects` package — consumers should `from aspects import ...` rather than reaching into the sub-modules.
 
 ### Formatter plug-in packaging (important and non-obvious)
 
@@ -75,7 +77,7 @@ Header behaviour is format-specific: TSV prefixes the first header cell with `# 
 ```python
 import types
 fake_sys = types.SimpleNamespace(stdout=types.SimpleNamespace(isatty=lambda: True))
-monkeypatch.setattr("aspects.cli.output.sys", fake_sys)
+monkeypatch.setattr("aspects.cli.sys", fake_sys)
 ```
 
 Click 8.2+ no longer accepts `mix_stderr=` on `CliRunner`; stderr is always separated — use `result.stderr` directly.
