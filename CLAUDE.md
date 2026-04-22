@@ -24,6 +24,23 @@ uv run python -c "from aspects.formatter import formatter_names; print(formatter
 
 After editing entry points in `pyproject.toml` (or adding a new formatter package), **re-run `uv sync`** — stevedore reads entry points from installed package metadata, so the in-place install must be rebuilt before `formatter_names()` reflects the change. Failing to do this is the most common reason a newly-added formatter "isn't found".
 
+## README is generated, not hand-written
+
+`README.md` is produced by `scripts/generate_readme.py` from a Jinja2 template (`scripts/readme_template.md.j2`) and runnable Click examples in `scripts/examples/`. The generator imports each example, invokes it with every built-in format via `CliRunner` (with `COLUMNS=80` and `NO_COLOR=1`, plus a post-hoc ANSI strip so the `display` output fits cleanly in a fenced markdown block), and injects the source + captured output into the template.
+
+```bash
+uv run python scripts/generate_readme.py           # regenerate README.md
+uv run python scripts/generate_readme.py --check   # verify it's in sync; prints a unified diff + exits 1 on drift
+```
+
+A pre-commit hook (`.pre-commit-config.yaml`) runs the `--check` variant whenever `README.md`, the generator script, the template, anything under `scripts/examples/`, or any `src/aspects/*.py` changes. First-time setup in a clone:
+
+```bash
+uv run pre-commit install
+```
+
+When you change the public API, the example will change (or start failing), the generator will produce a different README, and the hook will block the commit until you regenerate. **Never hand-edit `README.md`** — edit the template or the example instead.
+
 ## Versioning and releases
 
 Version is managed manually via `bump-my-version` (configured in `pyproject.toml` under `[tool.bumpversion]`). The single source of truth is `__version__` in `src/aspects/__init__.py`; setuptools reads it via `[tool.setuptools.dynamic]` and exposes it as the wheel's installed version. Do not edit the version by hand in more than one place — let `bump-my-version` update both the module and the `[tool.bumpversion] current_version` config in lock-step.
