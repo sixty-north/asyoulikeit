@@ -19,7 +19,7 @@ Gentle reader, this library doth furnish thy terminal tools with reports most ma
 
 Take thou a handler that returneth `Reports`, and with `@report_output` do thou dress it. Thus decorated are options imparted unto thy command: `--as` (which format thou shalt have), `--report` (which reports shall be shown), `--header` / `--no-header` (shall columns have their heads?), and `--detailed` / `--essential` (how copious thy detail?). When `--as` is withheld, judgement is passed wisely: to a terminal is given `display`; to a pipe, `tsv`.
 
-## Act I   a table, of the wives of Henry VIII
+## Act Ⅰ   a table, of the wives of Henry VIII
 
 ```python
 """List the six wives of Henry VIII as a Report.
@@ -72,7 +72,7 @@ if __name__ == "__main__":
     list_wives()
 ```
 
-### Scene i   `--as tsv`,   for the devices of UNIX
+### Scene ⅰ   `--as tsv`,   for the devices of UNIX
 
 ```
 # Name	Born	Fate
@@ -84,7 +84,7 @@ Catherine Howard	1523	Beheaded
 Catherine Parr	1512	Survived
 ```
 
-### Scene ii   `--as json`,   for the contrivances of the web
+### Scene ⅱ   `--as json`,   for the contrivances of the web
 
 ```json
 {
@@ -161,7 +161,7 @@ Catherine Parr	1512	Survived
 }
 ```
 
-### Scene iii   `--as display`,   for thine own eye
+### Scene ⅲ   `--as display`,   for thine own eye
 
 ```
                  Wives of Henry VIII                 
@@ -179,7 +179,7 @@ Catherine Parr	1512	Survived
                       survived.
 ```
 
-## Act II   two trees, in the forest of Arden
+## Act Ⅱ   two trees, in the forest of Arden
 
 Behold: the play that lent this library its name doth turn upon two brothers of the ducal stamp — one banish'd to the forest of Arden, the other an usurper at court — and upon the daughters each begat. Fitting, surely, that for houses which grow not together but apart, a `TreeContent` here taketh two roots: a forest in both shape and sense.
 
@@ -234,7 +234,7 @@ if __name__ == "__main__":
     list_dukes()
 ```
 
-### Scene i   `--as tsv`,   for the devices of UNIX
+### Scene ⅰ   `--as tsv`,   for the devices of UNIX
 
 ```
 # Name	Role
@@ -244,7 +244,7 @@ Duke Frederick	Usurper
   Celia	Heroine's cousin
 ```
 
-### Scene ii   `--as json`,   for the contrivances of the web
+### Scene ⅱ   `--as json`,   for the contrivances of the web
 
 ```json
 {
@@ -313,7 +313,7 @@ Duke Frederick	Usurper
 }
 ```
 
-### Scene iii   `--as display`,   for thine own eye
+### Scene ⅲ   `--as display`,   for thine own eye
 
 ```
           Ducal families of 'As You Like It'           
