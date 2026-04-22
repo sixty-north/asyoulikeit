@@ -81,7 +81,7 @@ Catherine Howard	1523	Beheaded
 Catherine Parr	1512	Survived
 ```
 
-### Scene II — rendered `--as json`, for the devices of the web
+### Scene II — rendered `--as json`, for the contrivances of the web
 
 ```json
 {
