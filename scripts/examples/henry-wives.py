@@ -2,12 +2,12 @@
 
 Run this file directly to see the default display format:
 
-    python scripts/examples/quickstart.py
+    python scripts/examples/henry-wives.py
 
 Or force a specific format:
 
-    python scripts/examples/quickstart.py --as tsv
-    python scripts/examples/quickstart.py --as json
+    python scripts/examples/henry-wives.py --as tsv
+    python scripts/examples/henry-wives.py --as json
 """
 
 import click

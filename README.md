@@ -25,17 +25,19 @@ Take thou a handler that returneth `Reports`, and with `@report_output` do thou 
 
 ## Act Ⅰ   a table, of the wives of Henry VIII
 
+*Enter* **`henry-wives.py`**:
+
 ```python
 """List the six wives of Henry VIII as a Report.
 
 Run this file directly to see the default display format:
 
-    python scripts/examples/quickstart.py
+    python scripts/examples/henry-wives.py
 
 Or force a specific format:
 
-    python scripts/examples/quickstart.py --as tsv
-    python scripts/examples/quickstart.py --as json
+    python scripts/examples/henry-wives.py --as tsv
+    python scripts/examples/henry-wives.py --as json
 """
 
 import click
@@ -78,6 +80,10 @@ if __name__ == "__main__":
 
 ### Scene ⅰ   `--as tsv`,   for the devices of UNIX
 
+```console
+$ python henry-wives.py --as tsv
+```
+
 ```
 # Name                 Born    Fate
 Catherine of Aragon    1485    Divorced
@@ -89,6 +95,10 @@ Catherine Parr         1512    Survived
 ```
 
 ### Scene ⅱ   `--as json`,   for the contrivances of the web
+
+```console
+$ python henry-wives.py --as json
+```
 
 ```json
 {
@@ -167,6 +177,10 @@ Catherine Parr         1512    Survived
 
 ### Scene ⅲ   `--as display`,   for thine own eye
 
+```console
+$ python henry-wives.py --as display
+```
+
 ```
                  Wives of Henry VIII                 
 ┏━━━━━━━━━━━━━━━━━━━━━┳━━━━━━┳━━━━━━━━━━┳━━━━━━━━━━━┓
@@ -186,6 +200,8 @@ Catherine Parr         1512    Survived
 ## Act Ⅱ   two trees, in the forest of Arden
 
 Behold: the play that lent this library its name doth turn upon two brothers of the ducal stamp — one banish'd to the forest of Arden, the other an usurper at court — and upon the daughters each begat. Fitting, surely, that for houses which grow not together but apart, a `TreeContent` here taketh two roots: a forest in both shape and sense.
+
+*Enter* **`arden-dukes.py`**:
 
 ```python
 """Families of Shakespeare's *As You Like It* as a Report.
@@ -240,6 +256,10 @@ if __name__ == "__main__":
 
 ### Scene ⅰ   `--as tsv`,   for the devices of UNIX
 
+```console
+$ python arden-dukes.py --as tsv
+```
+
 ```
 # Name            Path1             Path2       Role
 Duke Senior       Duke Senior                   Exiled duke
@@ -249,6 +269,10 @@ Celia             Duke Frederick    Celia       Heroine's cousin
 ```
 
 ### Scene ⅱ   `--as json`,   for the contrivances of the web
+
+```console
+$ python arden-dukes.py --as json
+```
 
 ```json
 {
@@ -318,6 +342,10 @@ Celia             Duke Frederick    Celia       Heroine's cousin
 ```
 
 ### Scene ⅲ   `--as display`,   for thine own eye
+
+```console
+$ python arden-dukes.py --as display
+```
 
 ```
           Ducal families of 'As You Like It'           

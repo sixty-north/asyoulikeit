@@ -25,11 +25,17 @@ Take thou a handler that returneth `Reports`, and with `@report_output` do thou 
 
 ## Act Ⅰ   a table, of the wives of Henry VIII
 
+*Enter* **`{{ table_example.name }}.py`**:
+
 ```python
 {{ table_example.source }}
 ```
 
 ### Scene ⅰ   `--as tsv`,   for the devices of UNIX
+
+```console
+$ python {{ table_example.name }}.py --as tsv
+```
 
 ```
 {{ table_example.outputs.tsv }}
@@ -37,11 +43,19 @@ Take thou a handler that returneth `Reports`, and with `@report_output` do thou 
 
 ### Scene ⅱ   `--as json`,   for the contrivances of the web
 
+```console
+$ python {{ table_example.name }}.py --as json
+```
+
 ```json
 {{ table_example.outputs.json }}
 ```
 
 ### Scene ⅲ   `--as display`,   for thine own eye
+
+```console
+$ python {{ table_example.name }}.py --as display
+```
 
 ```
 {{ table_example.outputs.display }}
@@ -51,11 +65,17 @@ Take thou a handler that returneth `Reports`, and with `@report_output` do thou 
 
 Behold: the play that lent this library its name doth turn upon two brothers of the ducal stamp — one banish'd to the forest of Arden, the other an usurper at court — and upon the daughters each begat. Fitting, surely, that for houses which grow not together but apart, a `TreeContent` here taketh two roots: a forest in both shape and sense.
 
+*Enter* **`{{ tree_example.name }}.py`**:
+
 ```python
 {{ tree_example.source }}
 ```
 
 ### Scene ⅰ   `--as tsv`,   for the devices of UNIX
+
+```console
+$ python {{ tree_example.name }}.py --as tsv
+```
 
 ```
 {{ tree_example.outputs.tsv }}
@@ -63,11 +83,19 @@ Behold: the play that lent this library its name doth turn upon two brothers of 
 
 ### Scene ⅱ   `--as json`,   for the contrivances of the web
 
+```console
+$ python {{ tree_example.name }}.py --as json
+```
+
 ```json
 {{ tree_example.outputs.json }}
 ```
 
 ### Scene ⅲ   `--as display`,   for thine own eye
+
+```console
+$ python {{ tree_example.name }}.py --as display
+```
 
 ```
 {{ tree_example.outputs.display }}

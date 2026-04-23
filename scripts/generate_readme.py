@@ -134,8 +134,8 @@ def render() -> str:
 
     import asyoulikeit
 
-    table_example = capture_example(EXAMPLES_DIR / "quickstart.py")
-    tree_example = capture_example(EXAMPLES_DIR / "ayli_tree.py")
+    table_example = capture_example(EXAMPLES_DIR / "henry-wives.py")
+    tree_example = capture_example(EXAMPLES_DIR / "arden-dukes.py")
 
     return template.render(
         version=asyoulikeit.__version__,
