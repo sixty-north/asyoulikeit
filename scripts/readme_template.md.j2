@@ -16,7 +16,7 @@ Gentle reader, this library doth furnish thy terminal tools with reports most ma
 </p>
 
 <p align="center">
-  <strong>Hark — the fuller folio awaiteth thee at <a href="https://sixty-north.github.io/asyoulikeit/">sixty-north.github.io/asyoulikeit</a>.</strong>
+  <strong>Hark! The fuller folio awaiteth thee at <a href="https://sixty-north.github.io/asyoulikeit/">sixty-north.github.io/asyoulikeit</a>.</strong>
 </p>
 
 ## Prologue
