@@ -241,11 +241,11 @@ if __name__ == "__main__":
 ### Scene ⅰ   `--as tsv`,   for the devices of UNIX
 
 ```
-# Name	Role
-Duke Senior	Exiled duke
-  Rosalind	Heroine
-Duke Frederick	Usurper
-  Celia	Heroine's cousin
+# Name	Path1	Path2	Role
+Duke Senior	Duke Senior		Exiled duke
+Rosalind	Duke Senior	Rosalind	Heroine
+Duke Frederick	Duke Frederick		Usurper
+Celia	Duke Frederick	Celia	Heroine's cousin
 ```
 
 ### Scene ⅱ   `--as json`,   for the contrivances of the web

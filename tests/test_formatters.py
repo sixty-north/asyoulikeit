@@ -761,57 +761,65 @@ def _tiny_tree() -> TreeContent:
 
 
 class TestTsvTreeRendering:
-    def test_headers_with_comment_prefix(self):
+    def test_header_row_shape(self):
+        # Leaf column (header-column label) first, then Path1..Path_{max_depth}
+        # labels, then any non-header data columns. _tiny_tree has max visible
+        # depth 3 under ESSENTIAL (the TSV default), so Path1..Path3.
         result = format_as(Reports(fs=Report(data=_tiny_tree())), "tsv")
-        assert result.splitlines()[0] == "# Name\tSize"
+        assert result.splitlines()[0] == "# Name\tPath1\tPath2\tPath3\tSize"
 
-    def test_depth_indent_on_header_column(self):
+    def test_full_layout_under_essential(self):
         result = format_as(Reports(fs=Report(data=_tiny_tree())), "tsv")
         lines = result.splitlines()
-        # TSV defaults to ESSENTIAL → 'kind' column (DETAIL) is dropped.
+        # Column 1 = leaf; columns 2..4 = full root-to-node path, left-packed
+        # and padded on the right with empty cells; column 5 = Size. The Kind
+        # column is DETAIL and dropped under the TSV default of ESSENTIAL.
         assert lines == [
-            "# Name\tSize",
-            "/usr\t0",
-            "  bin\t4096",
-            "    ls\t150296",
-            "    cat\t52024",
-            "  lib\t8192",
-            "    libc.so\t2000000",
+            "# Name\tPath1\tPath2\tPath3\tSize",
+            "/usr\t/usr\t\t\t0",
+            "bin\t/usr\tbin\t\t4096",
+            "ls\t/usr\tbin\tls\t150296",
+            "cat\t/usr\tbin\tcat\t52024",
+            "lib\t/usr\tlib\t\t8192",
+            "libc.so\t/usr\tlib\tlibc.so\t2000000",
         ]
 
     def test_detailed_includes_detail_column(self):
-        tree = _tiny_tree()
-        report = Report(data=tree)
-        # Override via explicit DetailLevel on the report
         from asyoulikeit import DetailLevel
-        report = Report(data=tree, detail_level=DetailLevel.DETAILED)
+        report = Report(data=_tiny_tree(), detail_level=DetailLevel.DETAILED)
         result = format_as(Reports(fs=report), "tsv")
         lines = result.splitlines()
-        assert lines[0] == "# Name\tSize\tKind"
-        assert "/usr\t0\tdir" in lines
-        assert "  bin\t4096\tdir" in lines
+        assert lines[0] == "# Name\tPath1\tPath2\tPath3\tSize\tKind"
+        assert "/usr\t/usr\t\t\t0\tdir" in lines
+        assert "bin\t/usr\tbin\t\t4096\tdir" in lines
+        assert "ls\t/usr\tbin\tls\t150296\texec" in lines
 
     def test_detail_node_pruned_under_essential(self):
         tree = TreeContent().add_column("name", "Name", header=True)
         root = tree.add_root(name="keep")
         root.add_child(name="essential-child")
-        # A DETAIL node and its descendant should both vanish under --essential
+        # A DETAIL node and its descendant both vanish under --essential,
+        # so max_depth collapses to 2 (root + essential-child).
         detail_child = root.add_child(name="detail-child", _importance=Importance.DETAIL)
         detail_child.add_child(name="grandchild")
 
         from asyoulikeit import DetailLevel
         report = Report(data=tree, detail_level=DetailLevel.ESSENTIAL)
         result = format_as(Reports(t=report), "tsv")
-        assert "keep" in result
-        assert "essential-child" in result
-        assert "detail-child" not in result
-        assert "grandchild" not in result
+        lines = result.splitlines()
+        assert lines == [
+            "# Name\tPath1\tPath2",
+            "keep\tkeep\t",
+            "essential-child\tkeep\tessential-child",
+        ]
 
     def test_header_flag_off_suppresses_header_row(self):
         report = Report(data=_tiny_tree(), header=False)
         result = format_as(Reports(fs=report), "tsv")
-        assert "# Name" not in result
-        assert result.splitlines()[0] == "/usr\t0"
+        lines = result.splitlines()
+        assert not any(line.startswith("#") for line in lines)
+        # First data row is the root — leaf + full path (just itself) + padding.
+        assert lines[0] == "/usr\t/usr\t\t\t0"
 
     def test_multiple_roots(self):
         tree = TreeContent().add_column("name", "Name", header=True)
@@ -819,12 +827,39 @@ class TestTsvTreeRendering:
         tree.add_root(name="/home").add_child(name="alice")
         result = format_as(Reports(fs=Report(data=tree)), "tsv")
         assert result.splitlines() == [
-            "# Name",
-            "/usr",
-            "  bin",
-            "/home",
-            "  alice",
+            "# Name\tPath1\tPath2",
+            "/usr\t/usr\t",
+            "bin\t/usr\tbin",
+            "/home\t/home\t",
+            "alice\t/home\talice",
         ]
+
+    def test_header_only_tree_no_data_columns(self):
+        # A tree carrying only the header column — no trailing data cells.
+        tree = TreeContent().add_column("name", "Name", header=True)
+        root = tree.add_root(name="a")
+        root.add_child(name="b").add_child(name="c")
+        result = format_as(Reports(t=Report(data=tree)), "tsv")
+        assert result.splitlines() == [
+            "# Name\tPath1\tPath2\tPath3",
+            "a\ta\t\t",
+            "b\ta\tb\t",
+            "c\ta\tb\tc",
+        ]
+
+    def test_every_row_has_same_column_count(self):
+        # Regression: rows must be fixed-width so awk/cut work at fixed offsets.
+        result = format_as(Reports(fs=Report(data=_tiny_tree())), "tsv")
+        cell_counts = {len(line.split("\t")) for line in result.splitlines()}
+        assert len(cell_counts) == 1
+
+    def test_leaf_is_always_column_one(self):
+        # The whole point of the redesign: awk '{print $1}' yields the leaf
+        # regardless of depth.
+        result = format_as(Reports(fs=Report(data=_tiny_tree())), "tsv")
+        data_rows = result.splitlines()[1:]
+        leaves = [row.split("\t")[0] for row in data_rows]
+        assert leaves == ["/usr", "bin", "ls", "cat", "lib", "libc.so"]
 
 
 class TestJsonTreeRendering:

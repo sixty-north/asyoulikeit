@@ -6,12 +6,6 @@ from asyoulikeit.tabular_data import DetailLevel, Importance, Reports, TableCont
 from asyoulikeit.tree_data import Node, TreeContent
 
 
-# Each level of depth in a tree indents the header column by this many
-# spaces. Plain spaces keep the TSV parseable by awk/cut/grep while
-# giving a strong visual hint of structure at the terminal.
-_TREE_INDENT = "  "
-
-
 class TsvFormatter(Formatter):
     """Tab-separated values formatter for UNIX-style processing.
 
@@ -21,9 +15,19 @@ class TsvFormatter(Formatter):
     comment.
 
     Multiple reports are separated by blank lines. Within a single
-    tree report, nodes are flattened in pre-order — the header-column
-    value of each node is prefixed with two spaces per level of depth,
-    giving a readable but still machine-parseable layout.
+    tree report, every node is flattened into its own row. Column 1
+    always carries the node's own header-column value (the leaf), so
+    ``awk '{print $1}'`` yields the node name regardless of tree
+    depth. Columns 2 onwards carry the full root-to-node path, one
+    component per cell, left-packed and padded on the right with
+    empty cells so every row has exactly ``max_depth`` path cells.
+    The leaf value therefore also appears as the last non-empty path
+    cell (intentional duplication — preserves the human-readable
+    full-path reading). Non-header data columns follow the path
+    cells. Path columns are labelled ``Path1``, ``Path2``, … in
+    1-based style so that ``PathK`` is exactly "the node at depth K"
+    (counting the root as depth 1); the largest ``PathN`` in the
+    header row reveals the tree's maximum visible depth.
     """
 
     def format(self, reports: Reports) -> str:
@@ -126,22 +130,33 @@ class TsvFormatter(Formatter):
             else data.essential_columns
         )
         header_col = data.header_column  # always present — enforced at add_root
+        non_header_cols = [col for col in columns if not col.header]
+
+        # Gather every visible node together with its ancestor chain —
+        # a tuple of header-column values from the root down to (but
+        # not including) the node itself. Roots yield with an empty
+        # ancestors tuple. A DETAIL node prunes its entire subtree, so
+        # the max-depth computation sees only the surviving tree.
+        visible = list(self._walk_with_ancestors(data, detail_level))
+        # 1-based depth of the deepest visible node: root is depth 1,
+        # its children depth 2, etc. An empty tree has max_depth 0.
+        max_depth = max((len(anc) + 1 for anc, _ in visible), default=0)
 
         lines = []
         if header:
-            labels = [col.label for col in columns]
-            if labels:
-                labels[0] = f"# {labels[0]}"
-            lines.append("\t".join(labels))
+            path_labels = [f"Path{k}" for k in range(1, max_depth + 1)]
+            data_labels = [col.label for col in non_header_cols]
+            all_labels = [header_col.label] + path_labels + data_labels
+            all_labels[0] = f"# {all_labels[0]}"
+            lines.append("\t".join(all_labels))
 
-        for depth, node in self._walk(data, detail_level):
-            cells = []
-            for col in columns:
-                value = str(node.values[col.key])
-                if col.key == header_col.key:
-                    value = _TREE_INDENT * depth + value
-                cells.append(value)
-            lines.append("\t".join(cells))
+        for ancestors, node in visible:
+            leaf_value = str(node.values[header_col.key])
+            # Full root-to-node path, left-packed, padded on the right.
+            full_path = [str(a) for a in ancestors] + [leaf_value]
+            path_cells = full_path + [""] * (max_depth - len(full_path))
+            data_cells = [str(node.values[col.key]) for col in non_header_cols]
+            lines.append("\t".join([leaf_value] + path_cells + data_cells))
 
         return "\n".join(lines)
 
@@ -163,18 +178,35 @@ class TsvFormatter(Formatter):
     # -- shared helpers -----------------------------------------------------
 
     @classmethod
-    def _walk(cls, data: TreeContent, detail_level: DetailLevel):
-        """Yield (depth, node) pairs in pre-order, filtered by detail."""
+    def _walk_with_ancestors(cls, data: TreeContent, detail_level: DetailLevel):
+        """Yield (ancestor_tuple, node) for every visible node in pre-order.
+
+        ``ancestor_tuple`` is a tuple of header-column values from the
+        root down to (but not including) the yielded node. A root
+        yields with an empty tuple.
+        """
+        header_key = data.header_column.key
         for root in data.roots:
-            yield from cls._walk_node(root, 0, detail_level)
+            yield from cls._walk_node_with_ancestors(
+                root, (), header_key, detail_level
+            )
 
     @classmethod
-    def _walk_node(cls, node: Node, depth: int, detail_level: DetailLevel):
+    def _walk_node_with_ancestors(
+        cls,
+        node: Node,
+        ancestors: tuple,
+        header_key: str,
+        detail_level: DetailLevel,
+    ):
         if not cls._node_visible(node, detail_level):
             return
-        yield depth, node
+        yield ancestors, node
+        child_ancestors = ancestors + (node.values[header_key],)
         for child in node.children:
-            yield from cls._walk_node(child, depth + 1, detail_level)
+            yield from cls._walk_node_with_ancestors(
+                child, child_ancestors, header_key, detail_level
+            )
 
     @staticmethod
     def _node_visible(node: Node, detail_level: DetailLevel) -> bool:

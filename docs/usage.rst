@@ -209,9 +209,19 @@ to their audience:
   hierarchy, and the box adds no information. Multi-column trees and
   multi-report outputs keep the chrome (there's no other way to line
   up siblings or distinguish reports from one another).
-* ``tsv`` flattens the tree in pre-order and indents the header-column
-  value two spaces per level of depth, preserving tab separation so
-  downstream tools still parse cleanly.
+* ``tsv`` flattens the tree in pre-order into fixed-width rows. Column
+  one always carries the node's own header-column value (the leaf), so
+  ``awk '{print $1}'`` yields the node name regardless of depth.
+  Columns two onwards carry the full root-to-node path, one component
+  per cell, left-packed and padded on the right with empty cells so
+  every row has the same number of path cells. The leaf therefore also
+  appears as the last non-empty path cell — intentional duplication
+  that keeps the row human-readable as a full path while giving
+  scripts a fixed leaf column. Path columns are labelled ``Path1``,
+  ``Path2``, … in 1-based style so that ``PathK`` is "the node at
+  depth K" (root = depth 1); the largest ``PathN`` in the header row
+  reveals the tree's maximum visible depth. Non-header data columns
+  follow the path cells with their usual labels.
 * ``json`` emits a nested ``{"values": {...}, "children": [...]}``
   structure under a ``"roots"`` list, with ``metadata.kind = "tree"``
   distinguishing it from table-shaped output.
