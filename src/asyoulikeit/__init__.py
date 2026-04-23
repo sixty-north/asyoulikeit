@@ -27,6 +27,7 @@ from asyoulikeit.tabular_data import (
     Reports,
     TableContent,
 )
+from asyoulikeit.scalar_data import ScalarContent
 from asyoulikeit.tree_data import Node, TreeContent
 
 __all__ = [
@@ -49,6 +50,7 @@ __all__ = [
     "STYLE_FOREGROUND_COLOR",
     "STYLE_ITALIC",
     "STYLE_WIDTH",
+    "ScalarContent",
     "TableContent",
     "TreeContent",
     "create_formatter",

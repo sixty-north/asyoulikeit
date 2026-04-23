@@ -216,6 +216,56 @@ to their audience:
   distinguishing it from table-shaped output.
 
 
+.. _scalar-content:
+
+Scalar content
+--------------
+
+Some commands produce just a single value — a name, a number, an
+address, a status string. Wrapping that in a transposed 1×1 table
+reads as ceremony around a single cell, and the JSON output ends up
+with ``"rows": [{"load": "00001900"}]`` where the consumer really
+just wants ``"value": "00001900"``. Use :class:`~asyoulikeit.ScalarContent`
+instead:
+
+.. code-block:: python
+
+   from asyoulikeit import (
+       Report, Reports, ScalarContent, report_output,
+   )
+
+   @click.command()
+   @report_output
+   @click.argument("image")
+   def disc_title(image):
+       return Reports(title=Report(data=ScalarContent(
+           value=_read_title(image),
+           title="Disc title",
+       )))
+
+The three formatters render scalars differently, following what each
+format's consumer actually wants:
+
+* ``display`` emits ``Title: value`` on a single line when a title is
+  set (``value`` alone otherwise), and the description — if any —
+  dim/italic on the line below.
+* ``tsv`` emits **just the raw value** by default. The dominant pipe
+  use case (``disc title image | pbcopy``) wants the answer, not a
+  commented label.
+* ``json`` emits the usual ``metadata`` / ``value`` shape, with
+  ``metadata.kind = "scalar"``. Consumers can read
+  ``.reports.title.value`` via ``jq`` and get exactly what they want.
+
+Header resolution for scalars (and every other content kind) is
+three-tier: the explicit CLI ``--header`` / ``--no-header`` wins if
+given; otherwise ``Report.header`` is consulted; otherwise the
+formatter picks a per-content default. TSV's default for scalars is
+``header=False`` (bare value); display's is ``True`` (labelled, if a
+title is set). To force the labelled TSV form ``# Title\nvalue``,
+pass ``header=True`` on the :class:`~asyoulikeit.Report`, or
+``--header`` on the CLI.
+
+
 Transposition
 -------------
 

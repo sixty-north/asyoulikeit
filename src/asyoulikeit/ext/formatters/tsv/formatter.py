@@ -1,6 +1,7 @@
 """Tab-separated values formatter."""
 
 from asyoulikeit.formatter import Formatter
+from asyoulikeit.scalar_data import ScalarContent
 from asyoulikeit.tabular_data import DetailLevel, Importance, Reports, TableContent
 from asyoulikeit.tree_data import Node, TreeContent
 
@@ -50,6 +51,8 @@ class TsvFormatter(Formatter):
                 sections.append(
                     self._format_tree(report.data, detail_level, header)
                 )
+            elif isinstance(report.data, ScalarContent):
+                sections.append(self._format_scalar(report.data, header))
             else:
                 raise TypeError(
                     f"TsvFormatter does not know how to render "
@@ -77,9 +80,16 @@ class TsvFormatter(Formatter):
 
         For tables and trees the default is ``True`` — the ``# Name\\t…``
         header line and the column labels are what make the TSV output
-        parseable by downstream tools. Special cases (e.g. a future
-        single-value content kind) can be handled here.
+        parseable by downstream tools. For :class:`ScalarContent`,
+        though, the overwhelmingly common case is piping a single value
+        to another tool (``disc title image | pbcopy``), which wants
+        the raw answer on its own; the ``# Title`` comment line is
+        chrome, not information. Scalars therefore default to ``False``
+        — explicit ``--header`` or ``header=True`` on the Report opts
+        the label back in.
         """
+        if isinstance(content, ScalarContent):
+            return False
         return True
 
     # -- table --------------------------------------------------------------
@@ -134,6 +144,21 @@ class TsvFormatter(Formatter):
             lines.append("\t".join(cells))
 
         return "\n".join(lines)
+
+    # -- scalar -------------------------------------------------------------
+
+    def _format_scalar(self, data: ScalarContent, header: bool) -> str:
+        """Format a single-value content as TSV.
+
+        ``header`` arrives already-resolved via ``_resolve_header`` —
+        for scalars, the default is ``False`` (just the value), but
+        an explicit ``--header`` or ``Report(header=True)`` flips to
+        the labelled form. ``description`` is never emitted in TSV
+        regardless of the flag — it's pipe-noise.
+        """
+        if header and data.title:
+            return f"# {data.title}\n{data.value}"
+        return f"{data.value}"
 
     # -- shared helpers -----------------------------------------------------
 

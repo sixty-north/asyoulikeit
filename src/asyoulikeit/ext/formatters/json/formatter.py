@@ -3,6 +3,7 @@
 import json
 
 from asyoulikeit.formatter import Formatter
+from asyoulikeit.scalar_data import ScalarContent
 from asyoulikeit.tabular_data import DetailLevel, Importance, Reports, TableContent
 from asyoulikeit.tree_data import Node, TreeContent
 
@@ -12,12 +13,16 @@ class JsonFormatter(Formatter):
 
     Outputs data as a JSON object with a top-level ``"reports"`` key
     containing named reports. Each report carries its own ``"metadata"``
-    (including a ``"kind"`` discriminator of ``"table"`` or ``"tree"``),
-    its ``"columns"`` schema, and then either ``"rows"`` (for table
-    content) or ``"roots"`` (for tree content) carrying the data.
+    (including a ``"kind"`` discriminator of ``"table"``, ``"tree"``,
+    or ``"scalar"``) and a shape-specific payload:
 
-    Consumers differentiate the two shapes via ``metadata.kind`` or,
-    structurally, by which of ``rows``/``roots`` is present.
+    - table: ``"columns"`` schema + ``"rows"``
+    - tree:  ``"columns"`` schema + ``"roots"`` (nested nodes)
+    - scalar: just ``"value"``
+
+    Consumers differentiate the shapes via ``metadata.kind`` or
+    structurally by which of ``rows`` / ``roots`` / ``value`` is
+    present.
 
     JSON always emits full metadata regardless of the ``header`` flag,
     since the format is self-describing by nature.
@@ -43,6 +48,8 @@ class JsonFormatter(Formatter):
                 rendered[report_name] = self._format_table(report.data, detail_level)
             elif isinstance(report.data, TreeContent):
                 rendered[report_name] = self._format_tree(report.data, detail_level)
+            elif isinstance(report.data, ScalarContent):
+                rendered[report_name] = self._format_scalar(report.data)
             else:
                 raise TypeError(
                     f"JsonFormatter does not know how to render "
@@ -122,3 +129,15 @@ class JsonFormatter(Formatter):
         if detail_level == DetailLevel.ESSENTIAL and node.importance == Importance.DETAIL:
             return False
         return True
+
+    # -- scalar -------------------------------------------------------------
+
+    def _format_scalar(self, data: ScalarContent) -> dict:
+        return {
+            "metadata": {
+                "kind": "scalar",
+                "title": data.title,
+                "description": data.description,
+            },
+            "value": data.value,
+        }

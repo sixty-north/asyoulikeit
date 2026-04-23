@@ -39,6 +39,14 @@ Tree content
    :show-inheritance:
 
 
+Scalar content
+--------------
+
+.. automodule:: asyoulikeit.scalar_data
+   :members:
+   :show-inheritance:
+
+
 The report-output decorator
 ---------------------------
 

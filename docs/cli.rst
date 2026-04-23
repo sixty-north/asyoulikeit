@@ -67,8 +67,8 @@ stderr listing the reports that were actually available.
 ``--header`` / ``--no-header``
 ------------------------------
 
-Overrides the command's default about whether to emit column headings.
-Behaviour varies by format:
+Overrides the command's default about whether to emit column headings
+and titles. Behaviour varies by format:
 
 - For ``tsv``, ``--no-header`` suppresses the ``# Name<TAB>…`` comment
   line entirely, leaving only data rows — useful when feeding
@@ -78,6 +78,14 @@ Behaviour varies by format:
   the title / description above and below the table.
 - For ``json``, the flag has no effect: JSON is self-describing and
   always includes the schema metadata.
+
+When the flag is absent, each formatter chooses its own default per
+content type. For tables and trees that default is ``--header``
+everywhere (column labels and titles are the structural information
+a consumer wants). For :class:`~asyoulikeit.ScalarContent`, the TSV
+formatter defaults to ``--no-header`` — a single-value report
+piped to another tool (``disc title image | pbcopy``) wants the raw
+answer, not a commented label. Explicit ``--header`` always wins.
 
 
 ``--detailed`` / ``--essential``

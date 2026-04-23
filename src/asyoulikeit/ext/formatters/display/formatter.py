@@ -17,6 +17,7 @@ from rich.table import Table
 from rich.text import Text
 
 from asyoulikeit.formatter import Formatter
+from asyoulikeit.scalar_data import ScalarContent
 from asyoulikeit.tabular_data import (
     STYLE_BACKGROUND_COLOR,
     STYLE_BOLD,
@@ -70,6 +71,8 @@ class DisplayFormatter(Formatter):
                         report.data, detail_level, header, solo=solo
                     )
                 )
+            elif isinstance(report.data, ScalarContent):
+                sections.append(self._format_scalar(report.data, header))
             else:
                 raise TypeError(
                     f"DisplayFormatter does not know how to render "
@@ -294,6 +297,37 @@ class DisplayFormatter(Formatter):
         if detail_level == DetailLevel.ESSENTIAL and node.importance == Importance.DETAIL:
             return False
         return True
+
+    # -- scalar -------------------------------------------------------------
+
+    def _format_scalar(self, data: ScalarContent, header: bool) -> str:
+        """Format a single-value content for a terminal.
+
+        Rules:
+
+        - If ``header`` is True and ``title`` is set: one line
+          ``Title: value``.
+        - Otherwise: ``value`` on its own line.
+        - If ``header`` is True and ``description`` is set: on the
+          following line, rendered dim/italic via Rich.
+        """
+        value_str = str(data.value)
+        if header and data.title:
+            first_line = f"{data.title}: {value_str}"
+        else:
+            first_line = value_str
+
+        if header and data.description:
+            # Use Rich to render the description dimly + italic, then
+            # capture as a string so the section composes into the
+            # wider output like every other section.
+            from rich.text import Text
+            desc = Text(data.description, style="dim italic")
+            buffer = StringIO()
+            console = Console(file=buffer, force_terminal=True)
+            console.print(desc)
+            return first_line + "\n" + buffer.getvalue()
+        return first_line + "\n"
 
     # -- shared Rich helpers ------------------------------------------------
 

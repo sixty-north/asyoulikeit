@@ -224,6 +224,39 @@ class TestHeaderToggle:
         assert "# X" not in result.output
         assert result.output.strip() == "1"
 
+    def test_scalar_tsv_defaults_to_bare_value(self):
+        """A ScalarContent in TSV mode renders just the value by default,
+        even with a title set — the format's per-content default wins."""
+        from asyoulikeit import ScalarContent
+
+        @click.command()
+        @report_output
+        def cmd():
+            return Reports(
+                load=Report(data=ScalarContent("00001900", title="Load"))
+            )
+
+        result = CliRunner().invoke(cmd, ["--as", "tsv"])
+        assert result.exit_code == 0
+        assert result.output.strip() == "00001900"
+        assert "Load" not in result.output
+
+    def test_scalar_tsv_with_explicit_header_shows_label(self):
+        """`--header` on the CLI opts into the `# Title\\nvalue` form."""
+        from asyoulikeit import ScalarContent
+
+        @click.command()
+        @report_output
+        def cmd():
+            return Reports(
+                load=Report(data=ScalarContent("00001900", title="Load"))
+            )
+
+        result = CliRunner().invoke(cmd, ["--as", "tsv", "--header"])
+        assert result.exit_code == 0
+        assert "# Load" in result.output
+        assert "00001900" in result.output
+
 
 class TestDetailLevelFiltering:
     """Tests for --detailed / --essential overriding the default."""

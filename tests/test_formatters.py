@@ -1022,3 +1022,227 @@ class TestFormatterRejectsUnknownContent:
         for fmt in ("tsv", "json", "display"):
             with pytest.raises(TypeError, match=r"kind='widget'"):
                 format_as(Reports(w=report), fmt)
+
+
+# -----------------------------------------------------------------------------
+# ScalarContent rendering
+# -----------------------------------------------------------------------------
+
+from asyoulikeit import ScalarContent
+
+
+class TestTsvScalarRendering:
+    """TSV defaults to 'just the value' for scalars, per-content default."""
+
+    def test_bare_value_no_title_no_flag(self):
+        result = format_as(
+            Reports(x=Report(data=ScalarContent("00001900"))), "tsv"
+        )
+        assert result == "00001900"
+
+    def test_bare_value_with_title_but_default_header(self):
+        """Title set but no explicit header — TSV default is bare."""
+        result = format_as(
+            Reports(x=Report(data=ScalarContent("00001900", title="Load"))),
+            "tsv",
+        )
+        assert result == "00001900"
+
+    def test_labelled_form_with_explicit_header_true(self):
+        """`header=True` on the Report opts into the `# Title\\nvalue` shape."""
+        result = format_as(
+            Reports(
+                x=Report(
+                    data=ScalarContent("00001900", title="Load"),
+                    header=True,
+                )
+            ),
+            "tsv",
+        )
+        assert result == "# Load\n00001900"
+
+    def test_explicit_header_false_is_bare_even_if_title_set(self):
+        result = format_as(
+            Reports(
+                x=Report(
+                    data=ScalarContent("00001900", title="Load"),
+                    header=False,
+                )
+            ),
+            "tsv",
+        )
+        assert result == "00001900"
+
+    def test_description_never_emitted(self):
+        result = format_as(
+            Reports(
+                x=Report(
+                    data=ScalarContent(
+                        "00001900", title="Load", description="An address."
+                    ),
+                    header=True,
+                )
+            ),
+            "tsv",
+        )
+        assert "An address." not in result
+        assert result == "# Load\n00001900"
+
+    @pytest.mark.parametrize(
+        "value,expected",
+        [
+            ("str", "str"),
+            (42, "42"),
+            (3.14, "3.14"),
+            (True, "True"),
+            (False, "False"),
+            (None, "None"),
+        ],
+    )
+    def test_various_value_types(self, value, expected):
+        result = format_as(
+            Reports(x=Report(data=ScalarContent(value))), "tsv"
+        )
+        assert result == expected
+
+
+class TestJsonScalarRendering:
+    def test_shape(self):
+        result = format_as(
+            Reports(
+                load=Report(
+                    data=ScalarContent(
+                        "00001900", title="Load", description="An address."
+                    )
+                )
+            ),
+            "json",
+        )
+        parsed = json.loads(result)
+        assert parsed == {
+            "reports": {
+                "load": {
+                    "metadata": {
+                        "kind": "scalar",
+                        "title": "Load",
+                        "description": "An address.",
+                    },
+                    "value": "00001900",
+                }
+            }
+        }
+
+    def test_nulls_for_absent_metadata(self):
+        result = format_as(
+            Reports(x=Report(data=ScalarContent("v"))), "json"
+        )
+        parsed = json.loads(result)
+        assert parsed["reports"]["x"]["metadata"] == {
+            "kind": "scalar",
+            "title": None,
+            "description": None,
+        }
+        assert parsed["reports"]["x"]["value"] == "v"
+
+    @pytest.mark.parametrize(
+        "value",
+        ["str", 42, 3.14, True, False, None],
+    )
+    def test_value_types_roundtrip(self, value):
+        result = format_as(
+            Reports(x=Report(data=ScalarContent(value))), "json"
+        )
+        parsed = json.loads(result)
+        assert parsed["reports"]["x"]["value"] == value
+
+    def test_header_flag_does_not_affect_json(self):
+        """JSON is always self-describing; header is a no-op."""
+        sc = ScalarContent("v", title="T")
+        r_true = format_as(Reports(x=Report(data=sc, header=True)), "json")
+        r_false = format_as(Reports(x=Report(data=sc, header=False)), "json")
+        assert r_true == r_false
+
+
+class TestDisplayScalarRendering:
+    @staticmethod
+    def _render(report):
+        import os
+        os.environ.setdefault("COLUMNS", "80")
+        os.environ.setdefault("NO_COLOR", "1")
+        return strip_ansi_codes(format_as(Reports(x=report), "display"))
+
+    def test_bare_value_no_title(self):
+        result = self._render(Report(data=ScalarContent("00001900")))
+        assert result.strip() == "00001900"
+
+    def test_labelled_with_title_default_header(self):
+        """Default header is True for display → labelled form when title set."""
+        result = self._render(
+            Report(data=ScalarContent("00001900", title="Load"))
+        )
+        assert "Load: 00001900" in result
+
+    def test_description_shown_below_when_header_true(self):
+        result = self._render(
+            Report(
+                data=ScalarContent(
+                    "00001900", title="Load", description="An address."
+                )
+            )
+        )
+        assert "Load: 00001900" in result
+        assert "An address." in result
+
+    def test_header_false_hides_title_and_description(self):
+        result = self._render(
+            Report(
+                data=ScalarContent(
+                    "00001900", title="Load", description="An address."
+                ),
+                header=False,
+            )
+        )
+        assert "Load" not in result
+        assert "An address." not in result
+        # Value itself still shows.
+        assert "00001900" in result
+
+    def test_no_title_value_only_regardless_of_header(self):
+        """With no title, there's nothing to label — show just value."""
+        for header in (True, False, None):
+            result = self._render(
+                Report(data=ScalarContent("v"), header=header)
+            )
+            assert result.strip() == "v"
+
+
+class TestScalarHeaderResolution:
+    """Three-tier resolution: CLI > Report.header > formatter default."""
+
+    def test_report_header_none_uses_formatter_default_tsv(self):
+        """No opinion on Report → TSV picks False for scalars → bare value."""
+        r = Report(data=ScalarContent("v", title="T"))  # header default is None
+        assert r.header is None
+        assert format_as(Reports(x=r), "tsv") == "v"
+
+    def test_report_header_none_uses_formatter_default_display(self):
+        """No opinion on Report → display picks True → labelled if title."""
+        import os
+        os.environ.setdefault("COLUMNS", "80")
+        os.environ.setdefault("NO_COLOR", "1")
+        r = Report(data=ScalarContent("v", title="T"))
+        out = strip_ansi_codes(format_as(Reports(x=r), "display"))
+        assert "T: v" in out
+
+    def test_report_header_true_wins_over_tsv_default(self):
+        r = Report(data=ScalarContent("v", title="T"), header=True)
+        assert format_as(Reports(x=r), "tsv") == "# T\nv"
+
+    def test_report_header_false_wins_over_display_default(self):
+        import os
+        os.environ.setdefault("COLUMNS", "80")
+        os.environ.setdefault("NO_COLOR", "1")
+        r = Report(data=ScalarContent("v", title="T"), header=False)
+        out = strip_ansi_codes(format_as(Reports(x=r), "display"))
+        assert "T: v" not in out
+        assert "v" in out
