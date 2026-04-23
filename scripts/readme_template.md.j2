@@ -4,7 +4,7 @@
 
 # asyoulikeit
 
-> `--as tsv | json | display` → *as you like it*
+> `$ your-cli [--as tsv | json | display]` → *as you like it*
 
 Gentle reader, this library doth furnish thy terminal tools with reports most manifold: to the device made glorious by this Son of Jay, to the pipe in honest tabulations, and to thine own eye in fair display — every format, verily, **as thou likest it**.
 
