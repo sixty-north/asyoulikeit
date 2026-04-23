@@ -36,6 +36,7 @@ dependencies = [
 
 [project.urls]
 Homepage = "https://github.com/sixty-north/asyoulikeit"
+Documentation = "https://sixty-north.github.io/asyoulikeit/"
 Repository = "https://github.com/sixty-north/asyoulikeit"
 Issues = "https://github.com/sixty-north/asyoulikeit/issues"
 
