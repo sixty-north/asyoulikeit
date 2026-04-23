@@ -46,6 +46,11 @@ class DisplayFormatter(Formatter):
     def format(self, reports: Reports) -> str:
         """Format reports as Rich tables, separated by blank lines."""
         sections = []
+        # When only one report is being rendered, certain chrome
+        # (bordered box around a single-column tree) stops earning its
+        # keep and is dropped. With multiple reports the chrome is what
+        # visually separates them, so it's kept.
+        solo = len(reports) == 1
         for _report_name, report in reports.items():
             detail_level = report.detail_level
             header = report.header
@@ -61,7 +66,9 @@ class DisplayFormatter(Formatter):
                 )
             elif isinstance(report.data, TreeContent):
                 sections.append(
-                    self._format_tree(report.data, detail_level, header)
+                    self._format_tree(
+                        report.data, detail_level, header, solo=solo
+                    )
                 )
             else:
                 raise TypeError(
@@ -126,13 +133,25 @@ class DisplayFormatter(Formatter):
     # -- tree ---------------------------------------------------------------
 
     def _format_tree(
-        self, data: TreeContent, detail_level: DetailLevel, header: bool
+        self,
+        data: TreeContent,
+        detail_level: DetailLevel,
+        header: bool,
+        solo: bool = False,
     ) -> str:
         columns = (
             data.columns if detail_level == DetailLevel.DETAILED
             else data.essential_columns
         )
         header_col: Column = data.header_column  # guaranteed by TreeContent
+
+        # Single-column tree with no sibling reports to disambiguate
+        # from? The bordered table around the tree adds visual noise
+        # without adding information — the ASCII-art connectors
+        # already convey hierarchy. Drop the chrome.
+        if solo and len(columns) == 1:
+            return self._format_tree_bare(data, detail_level, header, header_col)
+
         non_header_cols = [c for c in columns if not c.header]
 
         table = Table(
@@ -164,6 +183,45 @@ class DisplayFormatter(Formatter):
             table.add_row(header_cell, *other_cells)
 
         return self._render_to_string(table)
+
+    def _format_tree_bare(
+        self,
+        data: TreeContent,
+        detail_level: DetailLevel,
+        header: bool,
+        header_col: Column,
+    ) -> str:
+        """Emit a single-column tree as bare ASCII art, without table chrome.
+
+        Called only when there's exactly one report and the tree has
+        exactly one column, so the bordered table wouldn't add any
+        information. Title and description are included as plain lines
+        above and below the tree when ``header`` is true.
+        """
+        rendered: list[tuple[str, Node]] = []
+        for root in data.roots:
+            self._walk_subtree(
+                root,
+                prefix="",
+                is_root=True,
+                is_last=True,
+                detail_level=detail_level,
+                out=rendered,
+            )
+
+        lines = []
+        if header and data.title:
+            lines.append(data.title)
+            lines.append("")
+        for art, node in rendered:
+            lines.append(art + str(node.values[header_col.key]))
+        if header and data.description:
+            lines.append("")
+            lines.append(data.description)
+        # Match the trailing newline that Rich's Console.print adds on
+        # the chrome'd path, so callers that concatenate sections with
+        # "\n\n" don't see a shape discontinuity between modes.
+        return "\n".join(lines) + "\n"
 
     def _walk_subtree(
         self,

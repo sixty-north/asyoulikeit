@@ -905,6 +905,107 @@ class TestDisplayTreeRendering:
         assert "hidden" not in result
 
 
+class TestDisplayTreeChromeDrop:
+    """When a sole tree has only the header column, the table chrome is dropped."""
+
+    @staticmethod
+    def _single_col_tree(title=None, description=None):
+        tree = TreeContent(title=title, description=description).add_column(
+            "name", "Name", header=True
+        )
+        root = tree.add_root(name="image.dat")
+        root.add_child(name="ADFS").add_child(name="$")
+        root.add_child(name="AFS").add_child(name="$")
+        return tree
+
+    @staticmethod
+    def _render(reports):
+        import os
+        os.environ.setdefault("COLUMNS", "80")
+        os.environ.setdefault("NO_COLOR", "1")
+        return strip_ansi_codes(format_as(reports, "display"))
+
+    def test_solo_single_column_drops_chrome(self):
+        tree = self._single_col_tree()
+        result = self._render(Reports(fs=Report(data=tree)))
+        # No Rich table box — absence of the top-left and bottom-left
+        # corners is the reliable signal. (The continuation guide '│'
+        # appears in the tree's own ASCII-art, so it isn't diagnostic.)
+        assert "┏" not in result
+        assert "┗" not in result
+        # The column label 'Name' must not appear as a header row.
+        assert "Name" not in result
+        # ASCII-art connectors are present.
+        assert "├── ADFS" in result
+        assert "└── AFS" in result
+
+    def test_solo_single_column_with_title_shows_title_as_plain_line(self):
+        tree = self._single_col_tree(title="Archive contents")
+        result = self._render(Reports(fs=Report(data=tree)))
+        assert "Archive contents" in result
+        # No Rich title styling / box
+        assert "┏" not in result
+
+    def test_solo_single_column_no_header_hides_title(self):
+        tree = self._single_col_tree(
+            title="Archive contents", description="A caption"
+        )
+        result = self._render(
+            Reports(fs=Report(data=tree, header=False))
+        )
+        assert "Archive contents" not in result
+        assert "A caption" not in result
+        # Tree itself still renders.
+        assert "image.dat" in result
+
+    def test_solo_two_column_keeps_chrome(self):
+        tree = (
+            TreeContent(title="Sized")
+            .add_column("name", "Name", header=True)
+            .add_column("size", "Size")
+        )
+        tree.add_root(name="image.dat", size=1024).add_child(
+            name="ADFS", size=512
+        )
+        result = self._render(Reports(fs=Report(data=tree)))
+        # Two columns → Rich Table is still used.
+        assert "┏" in result
+
+    def test_multiple_reports_keep_chrome_even_if_each_is_single_column(self):
+        tree1 = TreeContent(title="one").add_column("name", "Name", header=True)
+        tree1.add_root(name="alpha")
+        tree2 = TreeContent(title="two").add_column("name", "Name", header=True)
+        tree2.add_root(name="beta")
+        result = self._render(
+            Reports(a=Report(data=tree1), b=Report(data=tree2))
+        )
+        # With two reports, each gets its bordered box so they're visually
+        # separable.
+        assert result.count("┏") == 2
+
+    def test_essential_detail_level_can_collapse_to_single_column(self):
+        """When --essential drops a DETAIL column, the result is single-column
+        and the chrome should also drop, even though the source has 2 columns."""
+        from asyoulikeit import DetailLevel
+        tree = (
+            TreeContent(title="Maybe bare")
+            .add_column("name", "Name", header=True)
+            .add_column("note", "Note", importance=Importance.DETAIL)
+        )
+        tree.add_root(name="root", note="hi").add_child(
+            name="child", note="there"
+        )
+        result = self._render(
+            Reports(
+                fs=Report(data=tree, detail_level=DetailLevel.ESSENTIAL)
+            )
+        )
+        # Only the header column survives under --essential, so the tree has
+        # a single column at render time — chrome should drop.
+        assert "┏" not in result
+        assert "├── child" in result or "└── child" in result
+
+
 class TestFormatterRejectsUnknownContent:
     """Each formatter should raise a clear TypeError for unknown content."""
 

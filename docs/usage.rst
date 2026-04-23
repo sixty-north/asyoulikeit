@@ -202,7 +202,12 @@ to their audience:
 
 * ``display`` lays ASCII-art connectors (``├──``, ``└──``, ``│``) into
   the first column of a Rich table, with the other columns lining up
-  as usual.
+  as usual. When the tree has only the header column *and* it's the
+  only report being shown, the bordered-table chrome is dropped and
+  the tree renders as bare ASCII — the connectors already convey the
+  hierarchy, and the box adds no information. Multi-column trees and
+  multi-report outputs keep the chrome (there's no other way to line
+  up siblings or distinguish reports from one another).
 * ``tsv`` flattens the tree in pre-order and indents the header-column
   value two spaces per level of depth, preserving tab separation so
   downstream tools still parse cleanly.
