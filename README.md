@@ -79,13 +79,13 @@ if __name__ == "__main__":
 ### Scene ⅰ   `--as tsv`,   for the devices of UNIX
 
 ```
-# Name	Born	Fate
-Catherine of Aragon	1485	Divorced
-Anne Boleyn	1501	Beheaded
-Jane Seymour	1508	Died
-Anne of Cleves	1515	Divorced
-Catherine Howard	1523	Beheaded
-Catherine Parr	1512	Survived
+# Name                 Born    Fate
+Catherine of Aragon    1485    Divorced
+Anne Boleyn            1501    Beheaded
+Jane Seymour           1508    Died
+Anne of Cleves         1515    Divorced
+Catherine Howard       1523    Beheaded
+Catherine Parr         1512    Survived
 ```
 
 ### Scene ⅱ   `--as json`,   for the contrivances of the web
@@ -241,11 +241,11 @@ if __name__ == "__main__":
 ### Scene ⅰ   `--as tsv`,   for the devices of UNIX
 
 ```
-# Name	Path1	Path2	Role
-Duke Senior	Duke Senior		Exiled duke
-Rosalind	Duke Senior	Rosalind	Heroine
-Duke Frederick	Duke Frederick		Usurper
-Celia	Duke Frederick	Celia	Heroine's cousin
+# Name            Path1             Path2       Role
+Duke Senior       Duke Senior                   Exiled duke
+Rosalind          Duke Senior       Rosalind    Heroine
+Duke Frederick    Duke Frederick                Usurper
+Celia             Duke Frederick    Celia       Heroine's cousin
 ```
 
 ### Scene ⅱ   `--as json`,   for the contrivances of the web

@@ -37,9 +37,49 @@ ANSI_M_RE = re.compile(r"\x1b\[[0-9;]*m")
 # order they appear in the template.
 FORMATS = ("tsv", "json", "display")
 
+# Gap between columns when prettifying TSV for the README — wide enough
+# that adjacent cells never read as one, narrow enough that the block
+# doesn't sprawl.
+TSV_COLUMN_GAP = 4
+
 
 def strip_ansi(text: str) -> str:
     return ANSI_M_RE.sub("", text)
+
+
+def prettify_tsv(text: str, gap: int = TSV_COLUMN_GAP) -> str:
+    """Replace tabs with space padding so the README shows aligned columns.
+
+    The captured output is still real TSV (tabs between cells); markdown
+    code blocks render tabs inconsistently and visually collapse them
+    with space-bearing cells like ``"Duke Senior"``. We reformat each
+    blank-line-separated block independently (multi-report output keeps
+    per-report column widths), padding each column to its observed
+    maximum plus a fixed inter-column gap. The last cell of each row
+    gets no trailing pad.
+    """
+    return "\n\n".join(_align_tsv_block(b, gap) for b in text.split("\n\n"))
+
+
+def _align_tsv_block(block: str, gap: int) -> str:
+    if "\t" not in block:
+        return block  # scalar output or other tab-free block
+    lines = block.split("\n")
+    rows = [line.split("\t") for line in lines]
+    column_count = max(len(row) for row in rows)
+    rows = [row + [""] * (column_count - len(row)) for row in rows]
+    column_widths = [
+        max(len(row[i]) for row in rows) for i in range(column_count)
+    ]
+    formatted_lines = []
+    for row in rows:
+        cells = [
+            cell.ljust(column_widths[i] + gap)
+            for i, cell in enumerate(row[:-1])
+        ]
+        cells.append(row[-1])
+        formatted_lines.append("".join(cells).rstrip())
+    return "\n".join(formatted_lines)
 
 
 def load_example_command(path: Path) -> click.Command:
@@ -77,7 +117,10 @@ def capture_example(path: Path) -> dict:
                 f"stdout:\n{result.output}\n"
                 f"exception: {result.exception}"
             )
-        outputs[fmt] = strip_ansi(result.output).rstrip()
+        captured = strip_ansi(result.output).rstrip()
+        if fmt == "tsv":
+            captured = prettify_tsv(captured)
+        outputs[fmt] = captured
     return {"name": path.stem, "source": source, "outputs": outputs}
 
 
