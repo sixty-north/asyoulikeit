@@ -534,20 +534,24 @@ class Report:
     not starting with digit) to ensure compatibility with JSON/JavaScript.
 
     Attributes:
-        data: The content of this report (a :class:`ReportContent` subclass;
-            currently always a :class:`TableContent`)
-        styles: Optional styling information with same structure as data
-        title: Optional title for the report (may differ from TableContent title)
-        description: Optional description (may differ from TableContent description)
-        detail_level: Default detail level for this report (can be overridden by CLI)
-        header: Whether to include headers by default (can be overridden by CLI)
+        data: The content of this report (a :class:`ReportContent` subclass).
+        styles: Optional styling information with same structure as data.
+        title: Optional title for the report (may differ from TableContent title).
+        description: Optional description (may differ from TableContent description).
+        detail_level: Default detail level for this report (can be overridden by CLI).
+        header: Tri-state preference for whether headers/titles/chrome are
+            emitted. ``True`` or ``False`` are honoured as explicit requests;
+            ``None`` (the default) defers to the formatter, which picks a
+            sensible default per content type. Resolution order, highest
+            first: CLI ``--header``/``--no-header`` → this field → formatter
+            default.
     """
     data: ReportContent
     styles: Optional[TableContent] = None
     title: Optional[str] = None
     description: Optional[str] = None
     detail_level: DetailLevel = DetailLevel.AUTO
-    header: bool = True
+    header: Optional[bool] = None
 
 
 class Reports(Mapping[str, Report]):

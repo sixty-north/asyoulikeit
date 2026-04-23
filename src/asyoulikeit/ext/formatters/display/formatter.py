@@ -53,7 +53,7 @@ class DisplayFormatter(Formatter):
         solo = len(reports) == 1
         for _report_name, report in reports.items():
             detail_level = report.detail_level
-            header = report.header
+            header = self._resolve_header(report)
             # Display defaults to showing all columns.
             if detail_level == DetailLevel.AUTO:
                 detail_level = DetailLevel.DETAILED
@@ -78,6 +78,31 @@ class DisplayFormatter(Formatter):
                 )
 
         return "\n\n".join(sections)
+
+    # -- header resolution --------------------------------------------------
+
+    def _resolve_header(self, report) -> bool:
+        """Resolve the effective header flag for ``report``.
+
+        Returns ``report.header`` if the author set it explicitly to
+        ``True`` or ``False``; otherwise falls back to this formatter's
+        per-content default. The CLI ``--header`` / ``--no-header`` has
+        already been applied upstream (by ``@report_output``) by the
+        time we see the report, so we only need to handle the two-tier
+        "explicit-on-report or formatter-default" case here.
+        """
+        if report.header is not None:
+            return report.header
+        return self._default_header(report.data)
+
+    def _default_header(self, content) -> bool:
+        """Per-content default when neither CLI nor Report author asked.
+
+        Display chooses ``True`` for every content type: humans
+        generally want titles and column labels visible. Subclasses or
+        new content kinds can specialise here.
+        """
+        return True
 
     # -- table --------------------------------------------------------------
 

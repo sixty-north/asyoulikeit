@@ -37,7 +37,7 @@ class TsvFormatter(Formatter):
         sections = []
         for _report_name, report in reports.items():
             detail_level = report.detail_level
-            header = report.header
+            header = self._resolve_header(report)
             # TSV defaults to essential-only for machine parseability
             if detail_level == DetailLevel.AUTO:
                 detail_level = DetailLevel.ESSENTIAL
@@ -58,6 +58,29 @@ class TsvFormatter(Formatter):
                 )
 
         return "\n\n".join(sections)
+
+    # -- header resolution --------------------------------------------------
+
+    def _resolve_header(self, report) -> bool:
+        """Resolve the effective header flag for ``report``.
+
+        Returns ``report.header`` if the author set it explicitly to
+        ``True`` or ``False``; otherwise falls back to this formatter's
+        per-content default.
+        """
+        if report.header is not None:
+            return report.header
+        return self._default_header(report.data)
+
+    def _default_header(self, content) -> bool:
+        """Per-content default for TSV when neither CLI nor Report author asked.
+
+        For tables and trees the default is ``True`` — the ``# Name\\t…``
+        header line and the column labels are what make the TSV output
+        parseable by downstream tools. Special cases (e.g. a future
+        single-value content kind) can be handled here.
+        """
+        return True
 
     # -- table --------------------------------------------------------------
 
