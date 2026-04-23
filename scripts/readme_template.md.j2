@@ -10,7 +10,7 @@ Gentle reader, this library doth furnish thy terminal tools with reports most ma
 
 <p align="center">
   <a href="https://pypi.org/project/asyoulikeit/"><img src="https://img.shields.io/pypi/v/asyoulikeit.svg" alt="PyPI"></a>
-  <a href="https://sixty-north.github.io/asyoulikeit/"><img src="https://img.shields.io/github/actions/workflow/status/sixty-north/asyoulikeit/docs.yml?branch=master&label=docs" alt="Docs"></a>
+  <a href="https://github.com/sixty-north/asyoulikeit/actions/workflows/release.yml"><img src="https://img.shields.io/github/actions/workflow/status/sixty-north/asyoulikeit/release.yml?label=release" alt="Release"></a>
   <a href="https://github.com/sixty-north/asyoulikeit/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/sixty-north/asyoulikeit/ci.yml?branch=master&label=CI" alt="CI"></a>
   <a href="https://pypi.org/project/asyoulikeit/"><img src="https://img.shields.io/pypi/pyversions/asyoulikeit.svg" alt="Python versions"></a>
 </p>

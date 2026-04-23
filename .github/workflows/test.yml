@@ -2,7 +2,7 @@ name: Test
 
 # Reusable workflow: builds a wheel and runs the test suite against the
 # installed wheel (not the source tree) on a matrix of OS × Python
-# version. Called by ci.yml on push/PR and by publish.yml on v-tags so
+# version. Called by ci.yml on push/PR and by release.yml on v-tags so
 # that publication always follows a green test run against the exact
 # artefact shape users will install.
 

@@ -30,8 +30,9 @@ jobs:
 
   docs-build:
     # Validates the Sphinx site builds cleanly (with warnings treated as
-    # errors) on every push and pull request. This is the PR-time check;
-    # docs.yml does the actual Pages deployment on merge to master.
+    # errors) on every push and pull request. This is the PR-time check
+    # that catches regressions before merge; release.yml runs the same
+    # check as one of the gates for release-time Pages deployment.
     name: Sphinx docs build (strict)
     runs-on: ubuntu-latest
     steps:
