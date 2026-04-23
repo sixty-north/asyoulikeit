@@ -1,8 +1,11 @@
 name: Docs
 
-# Deploys the Sphinx site to GitHub Pages on every push to master, plus
-# on manual invocation from the Actions UI. The PR-time strict build
-# check lives in ci.yml; this workflow is specifically about publishing.
+# Deploys the Sphinx site to GitHub Pages on every release tag
+# (``vX.Y.Z``, as produced by bump-my-version), plus on manual
+# invocation from the Actions UI. The PR-time strict build check lives
+# in ci.yml; this workflow is specifically about publishing, and is
+# deliberately release-gated so that unreleased API surface doesn't
+# appear in the public docs between releases.
 #
 # Uses GitHub's Pages-from-Actions flow: no gh-pages branch, no manual
 # commits — the built HTML is uploaded as a Pages artifact and deployed
@@ -11,7 +14,7 @@ name: Docs
 
 on:
   push:
-    branches: [master]
+    tags: ['v*']
   workflow_dispatch:
 
 # Permissions required by actions/deploy-pages: read the repo, write to
