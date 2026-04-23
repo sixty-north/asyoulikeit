@@ -186,12 +186,13 @@ Key differences from ``TableContent``:
 * **Exactly one column must be marked** ``header=True``. Trees always
   need a label for each node; that label is what the display formatter
   draws alongside the ASCII-art connectors.
-* **``add_root`` is repeatable**. Call it once for a single tree, many
-  times to build a forest — useful when listing several independent
-  top-level items.
-* **``Node.add_child(...)`` returns the new child**, so you descend by
-  keeping a reference to each level you need. Siblings come from
-  calling ``add_child`` on the shared parent again.
+* **Repeatable roots.** ``add_root`` may be called once for a single
+  tree, or many times to build a forest — useful when listing several
+  independent top-level items.
+* **Return the child, not the parent.** ``Node.add_child(...)`` hands
+  back the newly-added child, so you descend by keeping a reference
+  to each level you need. Siblings come from calling ``add_child`` on
+  the shared parent again.
 * **Per-node** :class:`~asyoulikeit.Importance` **tagging prunes whole
   subtrees**. A node marked ``DETAIL`` and *all its descendants* drop
   out under ``--essential``, because you cannot show a child while
@@ -338,10 +339,10 @@ This is the clearest option when a handful of tests care about format;
 the intent is visible at the call site and each test remains self-
 contained.
 
-**Set the ``ASYOULIKEIT_FORMAT`` environment variable.** The
-decorator consults ``ASYOULIKEIT_FORMAT`` before falling back to the
-TTY check, so a session-wide, conftest-wide, or even test-wide
-override is one line away:
+**Set the environment variable.** The decorator consults
+``ASYOULIKEIT_FORMAT`` before falling back to the TTY check, so a
+session-wide, conftest-wide, or even test-wide override is one
+line away:
 
 .. code-block:: python
 
