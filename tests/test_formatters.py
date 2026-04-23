@@ -1299,3 +1299,34 @@ class TestScalarHeaderResolution:
         out = strip_ansi_codes(format_as(Reports(x=r), "display"))
         assert "T: v" not in out
         assert "v" in out
+
+
+class TestDescribeFormatter:
+    """Primitive for introspecting a formatter's description."""
+
+    def test_importable_from_top_level(self):
+        from asyoulikeit import describe_formatter
+        assert callable(describe_formatter)
+
+    def test_full_description_contains_class_docstring(self):
+        from asyoulikeit import describe_formatter
+        description = describe_formatter("tsv")
+        # TsvFormatter's docstring talks about awk/cut/grep — a stable lexical marker.
+        assert "awk" in description
+        # Multi-line text is preserved.
+        assert "\n" in description
+
+    def test_single_line_returns_just_first_line(self):
+        from asyoulikeit import describe_formatter
+        single = describe_formatter("tsv", single_line=True)
+        assert "\n" not in single
+        assert single.strip() != ""
+
+    def test_unknown_name_raises_with_available_list(self):
+        from asyoulikeit import describe_formatter, FormatterExtensionError
+        with pytest.raises(FormatterExtensionError) as excinfo:
+            describe_formatter("nope")
+        message = str(excinfo.value)
+        # Error should name the kind and list the valid alternatives.
+        assert "formatter" in message.lower()
+        assert "tsv" in message  # one of the built-ins should appear in the list

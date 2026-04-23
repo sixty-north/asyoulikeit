@@ -10,6 +10,7 @@ from asyoulikeit.formatter import (
     Formatter,
     FormatterExtensionError,
     create_formatter,
+    describe_formatter,
     format_as,
     formatter_names,
 )
@@ -54,6 +55,7 @@ __all__ = [
     "TableContent",
     "TreeContent",
     "create_formatter",
+    "describe_formatter",
     "format_as",
     "formatter_names",
     "report_output",
