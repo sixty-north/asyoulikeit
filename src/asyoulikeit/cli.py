@@ -15,8 +15,9 @@ from typing import Callable, Iterable
 import click
 from click_option_group import OptionGroup
 
-from asyoulikeit.formatter import formatter_names, format_as
-from asyoulikeit.tabular_data import DetailLevel, Reports
+from asyoulikeit.formatter import describe_formatter, formatter_names, format_as
+from asyoulikeit.scalar_data import ScalarContent
+from asyoulikeit.tabular_data import DetailLevel, Report, Reports, TableContent
 
 
 # Environment variable consulted when ``--as`` is not given on the
@@ -262,3 +263,73 @@ def report_output(
             click.echo(output)
 
     return wrapper
+
+
+def list_formatters_command() -> click.Command:
+    """Return a Click command that lists the available report-output formatters.
+
+    The returned command is decorated with :func:`report_output` — so it
+    inherits ``--as / --report / --header / --detailed`` and renders
+    identically to any other asyoulikeit command. Its payload is a
+    two-column :class:`~asyoulikeit.TableContent` (``Name``,
+    ``Description``) with one row per registered formatter. The
+    description is the formatter class's one-line summary (first
+    non-empty line of its docstring).
+
+    The host CLI adds it to its group under whatever name it prefers::
+
+        cli.add_command(list_formatters_command(), name="list-formatters")
+
+    Because ``formatter_names()`` is evaluated at factory-call time (not
+    at import time), any formatter that was registered via entry point
+    before the factory is called will appear in the listing and in
+    ``--as``'s choices.
+    """
+    @click.command()
+    @report_output
+    def list_formatters():
+        """List the available report output formatters."""
+        table = (
+            TableContent(title="Available formatters")
+            .add_column("name", "Name")
+            .add_column("description", "Description")
+        )
+        for name in sorted(formatter_names()):
+            table.add_row(
+                name=name,
+                description=describe_formatter(name, single_line=True),
+            )
+        return Reports(formatters=Report(data=table))
+    return list_formatters
+
+
+def describe_formatter_command() -> click.Command:
+    """Return a Click command that prints one formatter's full description.
+
+    The returned command is decorated with :func:`report_output` and
+    takes a single positional ``NAME`` argument restricted (via
+    ``click.Choice``) to the set of currently-registered formatters.
+    The payload is a :class:`~asyoulikeit.ScalarContent` whose
+    ``value`` is the full cleaned docstring and whose ``title`` is the
+    formatter name — so ``--as tsv`` yields the bare description
+    (pipe-friendly), ``--as json`` yields
+    ``{"metadata": {"title": "<name>"}, "value": "<desc>"}``, and
+    ``--as display`` yields ``<name>: <desc>``.
+
+    The host adds it under whatever name suits its CLI::
+
+        cli.add_command(describe_formatter_command(), name="describe-formatter")
+    """
+    @click.command()
+    @click.argument(
+        "name",
+        type=click.Choice(formatter_names(), case_sensitive=False),
+    )
+    @report_output
+    def describe(name: str):
+        """Describe a specific report output formatter."""
+        return Reports(formatter=Report(data=ScalarContent(
+            value=describe_formatter(name),
+            title=name,
+        )))
+    return describe

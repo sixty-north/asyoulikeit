@@ -2,7 +2,12 @@
 
 __version__ = "0.4.2"
 
-from asyoulikeit.cli import ALL_REPORTS, report_output
+from asyoulikeit.cli import (
+    ALL_REPORTS,
+    describe_formatter_command,
+    list_formatters_command,
+    report_output,
+)
 from asyoulikeit.content import ReportContent
 from asyoulikeit.exceptions import AsyoulikeitError
 from asyoulikeit.extension import Extension, ExtensionError
@@ -56,7 +61,9 @@ __all__ = [
     "TreeContent",
     "create_formatter",
     "describe_formatter",
+    "describe_formatter_command",
     "format_as",
     "formatter_names",
+    "list_formatters_command",
     "report_output",
 ]

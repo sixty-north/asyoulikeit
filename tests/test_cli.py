@@ -447,3 +447,147 @@ class TestReportOverrides:
         result = CliRunner().invoke(cmd, ["--as", "tsv", "--detailed"])
         assert "Note" in result.output
         assert "hello" in result.output
+
+
+class TestListFormattersCommand:
+    """Factory that returns a 'list registered formatters' Click command."""
+
+    def _make_cli(self):
+        from asyoulikeit import list_formatters_command
+
+        @click.group()
+        def cli():
+            pass
+
+        cli.add_command(list_formatters_command(), name="list-formatters")
+        return cli
+
+    def test_factory_returns_click_command(self):
+        from asyoulikeit import list_formatters_command
+        cmd = list_formatters_command()
+        assert isinstance(cmd, click.Command)
+
+    def test_tsv_output_has_one_row_per_registered_formatter(self):
+        cli = self._make_cli()
+        result = CliRunner().invoke(cli, ["list-formatters", "--as", "tsv"])
+        assert result.exit_code == 0, result.output
+        lines = result.output.strip().splitlines()
+        # Header + one row per built-in (display, json, tsv)
+        assert lines[0] == "# Name\tDescription"
+        data_lines = lines[1:]
+        assert len(data_lines) == 3
+        names = sorted(line.split("\t")[0] for line in data_lines)
+        assert names == ["display", "json", "tsv"]
+
+    def test_tsv_description_is_single_line(self):
+        cli = self._make_cli()
+        result = CliRunner().invoke(cli, ["list-formatters", "--as", "tsv"])
+        # Each row must have exactly 2 cells; multi-line docstrings must have
+        # collapsed to their first line.
+        for line in result.output.strip().splitlines()[1:]:
+            assert line.count("\t") == 1
+
+    def test_json_output_shape(self):
+        cli = self._make_cli()
+        result = CliRunner().invoke(cli, ["list-formatters", "--as", "json"])
+        assert result.exit_code == 0
+        parsed = json.loads(result.output)
+        report = parsed["reports"]["formatters"]
+        assert report["metadata"]["kind"] == "table"
+        names = sorted(row["name"] for row in report["rows"])
+        assert names == ["display", "json", "tsv"]
+
+    def test_display_output_contains_each_formatter_name(self):
+        cli = self._make_cli()
+        result = CliRunner().invoke(
+            cli,
+            ["list-formatters", "--as", "display"],
+            env={"COLUMNS": "80", "NO_COLOR": "1"},
+        )
+        assert result.exit_code == 0
+        for name in ("display", "json", "tsv"):
+            assert name in result.output
+
+    def test_host_can_pick_any_command_name(self):
+        """The factory doesn't dictate the command name — add_command does."""
+        from asyoulikeit import list_formatters_command
+
+        @click.group()
+        def cli():
+            pass
+
+        cli.add_command(list_formatters_command(), name="show-output-formats")
+        result = CliRunner().invoke(cli, ["show-output-formats", "--as", "tsv"])
+        assert result.exit_code == 0
+        assert "tsv" in result.output
+
+
+class TestDescribeFormatterCommand:
+    """Factory that returns a 'describe one formatter' Click command."""
+
+    def _make_cli(self):
+        from asyoulikeit import describe_formatter_command
+
+        @click.group()
+        def cli():
+            pass
+
+        cli.add_command(describe_formatter_command(), name="describe-formatter")
+        return cli
+
+    def test_factory_returns_click_command(self):
+        from asyoulikeit import describe_formatter_command
+        assert isinstance(describe_formatter_command(), click.Command)
+
+    def test_tsv_default_emits_bare_description(self):
+        cli = self._make_cli()
+        result = CliRunner().invoke(cli, ["describe-formatter", "tsv", "--as", "tsv"])
+        assert result.exit_code == 0, result.output
+        # Scalar TSV default is headerless: no leading "# tsv" line.
+        assert not result.output.startswith("#")
+        # And the captured content is the TsvFormatter docstring — 'awk' is a reliable anchor.
+        assert "awk" in result.output
+
+    def test_tsv_with_header_flag_emits_labelled_form(self):
+        cli = self._make_cli()
+        result = CliRunner().invoke(
+            cli, ["describe-formatter", "tsv", "--as", "tsv", "--header"]
+        )
+        assert result.exit_code == 0
+        lines = result.output.splitlines()
+        assert lines[0] == "# tsv"
+
+    def test_json_output_is_scalar_shape(self):
+        cli = self._make_cli()
+        result = CliRunner().invoke(cli, ["describe-formatter", "tsv", "--as", "json"])
+        assert result.exit_code == 0
+        parsed = json.loads(result.output)
+        report = parsed["reports"]["formatter"]
+        assert report["metadata"]["kind"] == "scalar"
+        assert report["metadata"]["title"] == "tsv"
+        assert "awk" in report["value"]
+
+    def test_display_output_labels_value_with_name(self):
+        cli = self._make_cli()
+        result = CliRunner().invoke(
+            cli,
+            ["describe-formatter", "tsv", "--as", "display"],
+            env={"COLUMNS": "80", "NO_COLOR": "1"},
+        )
+        assert result.exit_code == 0
+        # Scalar display default renders "title: value" when a title is set.
+        assert result.output.startswith("tsv:")
+
+    def test_missing_argument_fails_with_usage_error(self):
+        cli = self._make_cli()
+        result = CliRunner().invoke(cli, ["describe-formatter"])
+        assert result.exit_code != 0
+        assert "Usage" in result.output or "Missing argument" in result.output
+
+    def test_unknown_formatter_name_fails_at_parse(self):
+        cli = self._make_cli()
+        result = CliRunner().invoke(cli, ["describe-formatter", "nope"])
+        # click.Choice rejects at parse time with a listing of valid values.
+        assert result.exit_code != 0
+        assert "nope" in result.output
+        assert "tsv" in result.output  # the valid set is shown in the error

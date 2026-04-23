@@ -321,6 +321,68 @@ in the ``--as`` choices of every command decorated with
 ``@report_output``.
 
 
+Formatter introspection
+-----------------------
+
+Any CLI that lets users pass ``--as <format>`` eventually wants to
+answer "which values are legal, and what does each one do?" asyoulikeit
+exposes a primitive plus two command factories for exactly that.
+
+The primitive :func:`~asyoulikeit.describe_formatter` reads the
+formatter class's docstring (cleaned via :func:`inspect.cleandoc`,
+without instantiating the class):
+
+.. code-block:: python
+
+   from asyoulikeit import describe_formatter, formatter_names
+
+   for name in formatter_names():
+       print(name, "—", describe_formatter(name, single_line=True))
+
+Built on that primitive are two Click command factories,
+:func:`~asyoulikeit.list_formatters_command` and
+:func:`~asyoulikeit.describe_formatter_command`. Each returns a fully
+assembled :class:`click.Command` decorated with ``@report_output`` —
+so the meta-commands render in every format asyoulikeit already
+supports. The host CLI picks the displayed command name on
+``add_command``:
+
+.. code-block:: python
+
+   import click
+   from asyoulikeit import (
+       list_formatters_command, describe_formatter_command,
+   )
+
+   @click.group()
+   def cli():
+       pass
+
+   cli.add_command(list_formatters_command(), name="list-formatters")
+   cli.add_command(describe_formatter_command(), name="describe-formatter")
+
+The list command returns a
+:class:`~asyoulikeit.TableContent` of ``Name`` + one-line
+``Description`` rows; the describe command takes a ``NAME`` argument
+(restricted via ``click.Choice`` to the currently-registered
+formatters) and returns a :class:`~asyoulikeit.ScalarContent` whose
+``value`` is the full cleaned docstring and whose ``title`` is the
+formatter name. Both inherit ``--as / --report / --header /
+--detailed``, so:
+
+- ``cli list-formatters --as json | jq`` gives you a machine-readable
+  catalogue;
+- ``cli describe-formatter tsv`` (TTY) shows ``tsv: <description>``;
+- ``cli describe-formatter tsv --as tsv`` pipes the bare description
+  (headerless — the TSV default for :class:`~asyoulikeit.ScalarContent`).
+
+The factories are functions (not module-level command instances)
+deliberately: ``formatter_names()`` and the ``click.Choice`` over it
+are evaluated at factory-call time, so any formatter registered via
+entry point before the host CLI builds its group is picked up without
+a restart.
+
+
 .. _testing:
 
 Testing commands that use ``@report_output``
