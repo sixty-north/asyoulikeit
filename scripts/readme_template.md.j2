@@ -15,6 +15,10 @@ Gentle reader, this library doth furnish thy terminal tools with reports most ma
   <a href="https://pypi.org/project/asyoulikeit/"><img src="https://img.shields.io/pypi/pyversions/asyoulikeit.svg" alt="Python versions"></a>
 </p>
 
+<p align="center">
+  <strong>Hark — the fuller folio awaiteth thee at <a href="https://sixty-north.github.io/asyoulikeit/">sixty-north.github.io/asyoulikeit</a>.</strong>
+</p>
+
 ## Prologue
 
 Take thou a handler that returneth `Reports`, and with `@report_output` do thou dress it. Thus decorated are options imparted unto thy command: `--as` (which format thou shalt have), `--report` (which reports shall be shown), `--header` / `--no-header` (shall columns have their heads?), and `--detailed` / `--essential` (how copious thy detail?). When `--as` is withheld, judgement is passed wisely: to a terminal is given `display`; to a pipe, `tsv`.
