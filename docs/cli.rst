@@ -24,7 +24,7 @@ Selects the output format. Three values ship with ``asyoulikeit``:
 
 ``json``
   A pretty-printed JSON object. All reports from one invocation are
-  collected under a top-level ``"tables"`` key, with per-report
+  collected under a top-level ``"reports"`` key, with per-report
   metadata, column schema, and structured rows. This is the format to
   pick when you're consuming the output from another program, or
   piping it through ``jq``.
@@ -109,7 +109,7 @@ The options compose freely:
    mytool status --as tsv --essential --no-header | awk -F'\t' '{print $1}'
 
    # maximum detail as JSON for a script
-   mytool status --as json --detailed | jq '.tables.users.rows'
+   mytool status --as json --detailed | jq '.reports.users.rows'
 
    # human-readable, one specific report only
    mytool status --report users

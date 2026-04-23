@@ -92,7 +92,7 @@ Catherine Parr	1512	Survived
 
 ```json
 {
-  "tables": {
+  "reports": {
     "wives": {
       "metadata": {
         "kind": "table",
@@ -252,7 +252,7 @@ Duke Frederick	Usurper
 
 ```json
 {
-  "tables": {
+  "reports": {
     "dukes": {
       "metadata": {
         "kind": "tree",

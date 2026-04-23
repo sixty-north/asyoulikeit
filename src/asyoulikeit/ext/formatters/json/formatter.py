@@ -10,7 +10,7 @@ from asyoulikeit.tree_data import Node, TreeContent
 class JsonFormatter(Formatter):
     """JSON formatter for structured data output.
 
-    Outputs data as a JSON object with a top-level ``"tables"`` key
+    Outputs data as a JSON object with a top-level ``"reports"`` key
     containing named reports. Each report carries its own ``"metadata"``
     (including a ``"kind"`` discriminator of ``"table"`` or ``"tree"``),
     its ``"columns"`` schema, and then either ``"rows"`` (for table
@@ -30,9 +30,9 @@ class JsonFormatter(Formatter):
             reports: A Reports object containing one or more named reports.
 
         Returns:
-            Pretty-printed JSON string with a top-level ``"tables"`` key.
+            Pretty-printed JSON string with a top-level ``"reports"`` key.
         """
-        tables = {}
+        rendered = {}
         for report_name, report in reports.items():
             # JSON defaults to showing everything.
             detail_level = report.detail_level
@@ -40,9 +40,9 @@ class JsonFormatter(Formatter):
                 detail_level = DetailLevel.DETAILED
 
             if isinstance(report.data, TableContent):
-                tables[report_name] = self._format_table(report.data, detail_level)
+                rendered[report_name] = self._format_table(report.data, detail_level)
             elif isinstance(report.data, TreeContent):
-                tables[report_name] = self._format_tree(report.data, detail_level)
+                rendered[report_name] = self._format_tree(report.data, detail_level)
             else:
                 raise TypeError(
                     f"JsonFormatter does not know how to render "
@@ -50,7 +50,7 @@ class JsonFormatter(Formatter):
                     f"(kind={report.data.kind()!r})"
                 )
 
-        return json.dumps({"tables": tables}, indent=2)
+        return json.dumps({"reports": rendered}, indent=2)
 
     # -- table --------------------------------------------------------------
 

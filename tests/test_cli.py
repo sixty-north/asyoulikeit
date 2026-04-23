@@ -74,11 +74,11 @@ class TestFormatSelection:
         result = CliRunner().invoke(cmd, ["--as", "json"])
         assert result.exit_code == 0
         parsed = json.loads(result.output)
-        assert set(parsed["tables"].keys()) == {"people", "colors"}
+        assert set(parsed["reports"].keys()) == {"people", "colors"}
         # JSON defaults to DETAILED, so 'notes' column and Bob's DETAIL row appear.
-        people_cols = [c["key"] for c in parsed["tables"]["people"]["columns"]]
+        people_cols = [c["key"] for c in parsed["reports"]["people"]["columns"]]
         assert people_cols == ["name", "age", "notes"]
-        people_rows = parsed["tables"]["people"]["rows"]
+        people_rows = parsed["reports"]["people"]["rows"]
         assert {r["name"] for r in people_rows} == {"Alice", "Bob"}
 
     def test_as_display_renders(self):
@@ -250,10 +250,10 @@ class TestDetailLevelFiltering:
         result = CliRunner().invoke(cmd, ["--as", "json", "--essential"])
         assert result.exit_code == 0
         parsed = json.loads(result.output)
-        people_cols = [c["key"] for c in parsed["tables"]["people"]["columns"]]
+        people_cols = [c["key"] for c in parsed["reports"]["people"]["columns"]]
         # 'notes' is DETAIL, so it's filtered out when --essential forces the level.
         assert people_cols == ["name", "age"]
-        people_rows = parsed["tables"]["people"]["rows"]
+        people_rows = parsed["reports"]["people"]["rows"]
         assert {r["name"] for r in people_rows} == {"Alice"}
 
 

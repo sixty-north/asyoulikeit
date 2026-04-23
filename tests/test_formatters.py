@@ -113,7 +113,7 @@ class TestJSONFormatter:
 
         parsed = json.loads(result)
         assert parsed == {
-            "tables": {
+            "reports": {
                 "data": {
                     "metadata": {"kind": "table", "title": None, "description": None, "present_transposed": False},
                     "columns": [{"key": "name", "label": "Name", "header": False}],
@@ -135,7 +135,7 @@ class TestJSONFormatter:
 
         parsed = json.loads(result)
         assert parsed == {
-            "tables": {
+            "reports": {
                 "data": {
                     "metadata": {"kind": "table", "title": None, "description": None, "present_transposed": False},
                     "columns": [{"key": "name", "label": "Name", "header": False}],
@@ -158,7 +158,7 @@ class TestJSONFormatter:
 
         parsed = json.loads(result)
         assert parsed == {
-            "tables": {
+            "reports": {
                 "data": {
                     "metadata": {"kind": "table", "title": None, "description": None, "present_transposed": False},
                     "columns": [
@@ -185,7 +185,7 @@ class TestJSONFormatter:
 
         parsed = json.loads(result)
         assert parsed == {
-            "tables": {
+            "reports": {
                 "data": {
                     "metadata": {"kind": "table", "title": None, "description": None, "present_transposed": False},
                     "columns": [
@@ -229,7 +229,7 @@ class TestJSONFormatter:
 
         parsed = json.loads(result)
         assert parsed == {
-            "tables": {
+            "reports": {
                 "data": {
                     "metadata": {"kind": "table", "title": None, "description": None, "present_transposed": False},
                     "columns": [
@@ -267,7 +267,7 @@ class TestFormatAs:
         result = format_as(Reports(data=Report(data=data)), "json")
         parsed = json.loads(result)
         assert parsed == {
-            "tables": {
+            "reports": {
                 "data": {
                     "metadata": {"kind": "table", "title": None, "description": None, "present_transposed": False},
                     "columns": [{"key": "x", "label": "X", "header": False}],
@@ -376,9 +376,9 @@ class TestJSONFormatterMetadata:
         result = formatter.format(Reports(data=Report(data=data)))
 
         parsed = json.loads(result)
-        assert parsed["tables"]["data"]["metadata"]["title"] == "User Report"
-        assert parsed["tables"]["data"]["metadata"]["description"] == "Active users in the system"
-        assert parsed["tables"]["data"]["metadata"]["present_transposed"] is False
+        assert parsed["reports"]["data"]["metadata"]["title"] == "User Report"
+        assert parsed["reports"]["data"]["metadata"]["description"] == "Active users in the system"
+        assert parsed["reports"]["data"]["metadata"]["present_transposed"] is False
 
     def test_json_includes_metadata_with_null_values(self):
         """JSON output should include null metadata when not provided."""
@@ -392,7 +392,7 @@ class TestJSONFormatterMetadata:
         result = formatter.format(Reports(data=Report(data=data)))
 
         parsed = json.loads(result)
-        assert parsed["tables"]["data"]["metadata"] == {
+        assert parsed["reports"]["data"]["metadata"] == {
             "kind": "table",
             "title": None,
             "description": None,
@@ -411,7 +411,7 @@ class TestJSONFormatterMetadata:
         result = formatter.format(Reports(data=Report(data=data)))
 
         parsed = json.loads(result)
-        assert parsed["tables"]["data"]["metadata"]["present_transposed"] is True
+        assert parsed["reports"]["data"]["metadata"]["present_transposed"] is True
 
     def test_json_includes_header_flag_on_columns(self):
         """JSON output should include header flag on each column."""
@@ -426,8 +426,8 @@ class TestJSONFormatterMetadata:
         result = formatter.format(Reports(data=Report(data=data)))
 
         parsed = json.loads(result)
-        assert parsed["tables"]["data"]["columns"][0]["header"] is True
-        assert parsed["tables"]["data"]["columns"][1]["header"] is False
+        assert parsed["reports"]["data"]["columns"][0]["header"] is True
+        assert parsed["reports"]["data"]["columns"][1]["header"] is False
 
     def test_json_does_not_transpose_data(self):
         """JSON output should not transpose data even when present_transposed is True."""
@@ -444,10 +444,10 @@ class TestJSONFormatterMetadata:
 
         parsed = json.loads(result)
         # Data structure should remain the same, just metadata flag is set
-        assert len(parsed["tables"]["data"]["columns"]) == 2
-        assert len(parsed["tables"]["data"]["rows"]) == 2
-        assert parsed["tables"]["data"]["rows"][0] == {"name": "Alice", "age": 30}
-        assert parsed["tables"]["data"]["metadata"]["present_transposed"] is True
+        assert len(parsed["reports"]["data"]["columns"]) == 2
+        assert len(parsed["reports"]["data"]["rows"]) == 2
+        assert parsed["reports"]["data"]["rows"][0] == {"name": "Alice", "age": 30}
+        assert parsed["reports"]["data"]["metadata"]["present_transposed"] is True
 
 
 class TestDisplayFormatter:
@@ -699,7 +699,7 @@ class TestFormatterIntegration:
         parsed = json.loads(result)
 
         assert parsed == {
-            "tables": {
+            "reports": {
                 "data": {
                     "metadata": {"kind": "table", "title": None, "description": None, "present_transposed": False},
                     "columns": [
@@ -813,18 +813,18 @@ class TestJsonTreeRendering:
     def test_metadata_kind_is_tree(self):
         result = format_as(Reports(fs=Report(data=_tiny_tree())), "json")
         parsed = json.loads(result)
-        assert parsed["tables"]["fs"]["metadata"]["kind"] == "tree"
+        assert parsed["reports"]["fs"]["metadata"]["kind"] == "tree"
 
     def test_has_roots_not_rows(self):
         result = format_as(Reports(fs=Report(data=_tiny_tree())), "json")
         parsed = json.loads(result)
-        assert "roots" in parsed["tables"]["fs"]
-        assert "rows" not in parsed["tables"]["fs"]
+        assert "roots" in parsed["reports"]["fs"]
+        assert "rows" not in parsed["reports"]["fs"]
 
     def test_nested_children_structure(self):
         result = format_as(Reports(fs=Report(data=_tiny_tree())), "json")
         parsed = json.loads(result)
-        roots = parsed["tables"]["fs"]["roots"]
+        roots = parsed["reports"]["fs"]["roots"]
         assert len(roots) == 1
         usr = roots[0]
         assert usr["values"]["name"] == "/usr"
@@ -852,9 +852,9 @@ class TestJsonTreeRendering:
             "json",
         )
         parsed = json.loads(essential)
-        cols = [c["key"] for c in parsed["tables"]["t"]["columns"]]
+        cols = [c["key"] for c in parsed["reports"]["t"]["columns"]]
         assert cols == ["name"]  # note dropped
-        keep = parsed["tables"]["t"]["roots"][0]
+        keep = parsed["reports"]["t"]["roots"][0]
         assert "note" not in keep["values"]
         child_names = [c["values"]["name"] for c in keep["children"]]
         assert child_names == ["essential"]  # "gone" pruned
