@@ -28,6 +28,24 @@ def normalize_whitespace(text: str) -> str:
     return ' '.join(text.split())
 
 
+# Rich uses a heavy box style on Linux / macOS (top-left = ┏) and a
+# light box style on Windows (top-left = ┌) for better compatibility
+# with the Windows console. Either corner is a reliable signal that
+# the bordered-table chrome is present; the helpers below smooth over
+# the platform difference so tests don't have to encode both forms.
+_BOX_TOP_LEFT_CORNERS = ("┏", "┌")
+
+
+def has_box_chrome(text: str) -> bool:
+    """True iff a Rich Table's bordered-box chrome is present in ``text``."""
+    return any(corner in text for corner in _BOX_TOP_LEFT_CORNERS)
+
+
+def count_box_chromes(text: str) -> int:
+    """Count the number of distinct bordered-box chromes in ``text``."""
+    return sum(text.count(corner) for corner in _BOX_TOP_LEFT_CORNERS)
+
+
 class TestTSVFormatter:
     """Tests for TSV (Tab-Separated Values) formatter."""
 
@@ -928,11 +946,11 @@ class TestDisplayTreeChromeDrop:
     def test_solo_single_column_drops_chrome(self):
         tree = self._single_col_tree()
         result = self._render(Reports(fs=Report(data=tree)))
-        # No Rich table box — absence of the top-left and bottom-left
-        # corners is the reliable signal. (The continuation guide '│'
-        # appears in the tree's own ASCII-art, so it isn't diagnostic.)
-        assert "┏" not in result
-        assert "┗" not in result
+        # No Rich table box anywhere — absence of any top-left corner
+        # (heavy ┏ on Linux/macOS, light ┌ on Windows) is the reliable
+        # signal. (The continuation guide '│' appears in the tree's
+        # own ASCII-art, so it isn't diagnostic.)
+        assert not has_box_chrome(result)
         # The column label 'Name' must not appear as a header row.
         assert "Name" not in result
         # ASCII-art connectors are present.
@@ -944,7 +962,7 @@ class TestDisplayTreeChromeDrop:
         result = self._render(Reports(fs=Report(data=tree)))
         assert "Archive contents" in result
         # No Rich title styling / box
-        assert "┏" not in result
+        assert not has_box_chrome(result)
 
     def test_solo_single_column_no_header_hides_title(self):
         tree = self._single_col_tree(
@@ -969,7 +987,7 @@ class TestDisplayTreeChromeDrop:
         )
         result = self._render(Reports(fs=Report(data=tree)))
         # Two columns → Rich Table is still used.
-        assert "┏" in result
+        assert has_box_chrome(result)
 
     def test_multiple_reports_keep_chrome_even_if_each_is_single_column(self):
         tree1 = TreeContent(title="one").add_column("name", "Name", header=True)
@@ -981,7 +999,7 @@ class TestDisplayTreeChromeDrop:
         )
         # With two reports, each gets its bordered box so they're visually
         # separable.
-        assert result.count("┏") == 2
+        assert count_box_chromes(result) == 2
 
     def test_essential_detail_level_can_collapse_to_single_column(self):
         """When --essential drops a DETAIL column, the result is single-column
@@ -1002,7 +1020,7 @@ class TestDisplayTreeChromeDrop:
         )
         # Only the header column survives under --essential, so the tree has
         # a single column at render time — chrome should drop.
-        assert "┏" not in result
+        assert not has_box_chrome(result)
         assert "├── child" in result or "└── child" in result
 
 
