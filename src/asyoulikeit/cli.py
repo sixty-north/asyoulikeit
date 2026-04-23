@@ -6,6 +6,7 @@ formatted report output with support for multiple reports, format selection
 """
 
 import functools
+import os
 import sys
 from collections.abc import Container
 from dataclasses import replace
@@ -16,6 +17,14 @@ from click_option_group import OptionGroup
 
 from asyoulikeit.formatter import formatter_names, format_as
 from asyoulikeit.tabular_data import DetailLevel, Reports
+
+
+# Environment variable consulted when ``--as`` is not given on the
+# command line. Takes precedence over the TTY-based default so that
+# test harnesses (where stdout is a captured buffer with isatty() ==
+# False) can force a chosen format without touching every test, and
+# so that users can set a default in their shell rc-file.
+FORMAT_ENV_VAR = "ASYOULIKEIT_FORMAT"
 
 
 class _UniversalContainer(Container):
@@ -103,11 +112,30 @@ def report_output(
         processed_default_reports = frozenset(default_reports)
 
     def set_smart_default(ctx, param, value):
-        """Set default based on TTY detection if user didn't specify --as."""
-        if value is None:
-            # User didn't specify --as, use smart default based on TTY
-            return "display" if sys.stdout.isatty() else "tsv"
-        return value
+        """Resolve ``--as`` with this precedence, highest first:
+
+        1. An explicit ``--as`` value on the command line.
+        2. The ``ASYOULIKEIT_FORMAT`` environment variable.
+        3. A TTY-sensing default: ``display`` when stdout is a terminal,
+           ``tsv`` when it is a pipe.
+        """
+        if value is not None:
+            return value
+        env_value = os.environ.get(FORMAT_ENV_VAR)
+        if env_value:
+            valid = formatter_names()
+            # Case-insensitive match, to mirror click.Choice(case_sensitive=False)
+            # on the --as option itself.
+            for name in valid:
+                if name.lower() == env_value.lower():
+                    return name
+            raise click.BadParameter(
+                f"{FORMAT_ENV_VAR}={env_value!r} is not a known format. "
+                f"Available: {', '.join(sorted(valid))}.",
+                ctx=ctx,
+                param=param,
+            )
+        return "display" if sys.stdout.isatty() else "tsv"
 
     def map_detail_level(ctx, param, value):
         """Map tri-state boolean to DetailLevel enum."""

@@ -134,6 +134,72 @@ class TestSmartDefaultFormat:
         assert not result.output.startswith("# X")
 
 
+class TestFormatEnvVarOverride:
+    """Tests for the ASYOULIKEIT_FORMAT env-var override.
+
+    Precedence: explicit --as > ASYOULIKEIT_FORMAT > TTY-based default.
+    """
+
+    @staticmethod
+    def _cmd():
+        @click.command()
+        @report_output
+        def cmd():
+            data = TableContent().add_column("x", "X").add_row(x=1)
+            return Reports(only=Report(data=data))
+        return cmd
+
+    def test_env_var_beats_tty_default(self, monkeypatch):
+        """Env var forces display even though CliRunner reports isatty=False."""
+        monkeypatch.setenv("ASYOULIKEIT_FORMAT", "display")
+        result = CliRunner().invoke(self._cmd(), [])
+        assert result.exit_code == 0
+        # Display output never starts with the TSV '# X' signature.
+        assert not result.output.startswith("# X")
+        assert "X" in result.output
+
+    def test_env_var_forces_tsv(self, monkeypatch):
+        """Env var forces tsv explicitly (equivalent to the default here, but
+        proves the mechanism picks up non-default values too)."""
+        monkeypatch.setenv("ASYOULIKEIT_FORMAT", "json")
+        result = CliRunner().invoke(self._cmd(), [])
+        assert result.exit_code == 0
+        # JSON output starts with '{'; TSV would start with '# X'.
+        assert result.output.lstrip().startswith("{")
+
+    def test_explicit_cli_as_beats_env_var(self, monkeypatch):
+        """--as on the command line takes precedence over ASYOULIKEIT_FORMAT."""
+        monkeypatch.setenv("ASYOULIKEIT_FORMAT", "json")
+        result = CliRunner().invoke(self._cmd(), ["--as", "tsv"])
+        assert result.exit_code == 0
+        assert result.output.startswith("# X\n1")
+
+    def test_case_insensitive_match(self, monkeypatch):
+        """Env var value is matched case-insensitively, mirroring click.Choice."""
+        monkeypatch.setenv("ASYOULIKEIT_FORMAT", "DISPLAY")
+        result = CliRunner().invoke(self._cmd(), [])
+        assert result.exit_code == 0
+        assert not result.output.startswith("# X")
+
+    def test_empty_env_var_falls_through_to_tty_default(self, monkeypatch):
+        """An empty string in the env var should be treated as 'not set'."""
+        monkeypatch.setenv("ASYOULIKEIT_FORMAT", "")
+        result = CliRunner().invoke(self._cmd(), [])
+        assert result.exit_code == 0
+        # Falls through to TTY default — CliRunner's buffer isn't a tty, so tsv.
+        assert result.output.startswith("# X\n1")
+
+    def test_invalid_env_var_raises_clear_error(self, monkeypatch):
+        """An unknown format in ASYOULIKEIT_FORMAT fails with a helpful message."""
+        monkeypatch.setenv("ASYOULIKEIT_FORMAT", "xml")
+        result = CliRunner().invoke(self._cmd(), [])
+        assert result.exit_code != 0
+        # Click renders BadParameter into stderr with the message; check the
+        # exception carries the right context.
+        assert "ASYOULIKEIT_FORMAT" in str(result.output) + str(result.stderr)
+        assert "xml" in str(result.output) + str(result.stderr)
+
+
 class TestHeaderToggle:
     """Tests for --header / --no-header."""
 

@@ -32,6 +32,23 @@ Selects the output format. Three values ship with ``asyoulikeit``:
 Individual projects are free to register additional formats; run any
 command with ``--help`` to see the full list available in that tool.
 
+When ``--as`` is not given on the command line, the format is resolved
+in this precedence:
+
+1. ``--as`` on the command line (highest).
+2. The ``ASYOULIKEIT_FORMAT`` environment variable, if set to a valid
+   format name. An invalid value fails fast with a clear error;
+   matching is case-insensitive.
+3. The TTY-sensing default: ``display`` when stdout is a terminal,
+   ``tsv`` when it is a pipe (lowest).
+
+Setting ``ASYOULIKEIT_FORMAT`` in a shell profile is the standard way
+to make a tool default to JSON (or anything else) without having to
+type ``--as`` every time. Test harnesses — where captured stdout
+typically isn't a TTY — use the same lever to force ``display``
+without touching every test case; see :ref:`testing` in the usage
+guide.
+
 
 ``--report <name>``
 -------------------

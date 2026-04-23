@@ -253,3 +253,55 @@ Subclass :class:`~asyoulikeit.Formatter` and implement the single
 of the registering package, the new format name appears automatically
 in the ``--as`` choices of every command decorated with
 ``@report_output``.
+
+
+.. _testing:
+
+Testing commands that use ``@report_output``
+--------------------------------------------
+
+Click's :class:`click.testing.CliRunner` captures stdout into a string
+buffer. That buffer's ``isatty()`` returns ``False``, so the smart
+default for ``--as`` lands on ``tsv``. If the test has assertions
+about TSV output that's fine — you don't need to do anything. But if
+your assertions depend on ``display``-mode layout (Rich borders,
+titles, colour, wrapped text) or ``json`` structure, the captured
+buffer's default doesn't exercise that path.
+
+Two ways to get the format you want in tests:
+
+**Pin the format on each invocation.** Pass ``--as <format>``
+explicitly to the command under test:
+
+.. code-block:: python
+
+   def test_my_command_renders_the_title(runner):
+       result = runner.invoke(cli, ["my-command", "--as", "display", "input"])
+       assert "My Title" in result.output   # only visible in display mode
+
+This is the clearest option when a handful of tests care about format;
+the intent is visible at the call site and each test remains self-
+contained.
+
+**Set the ``ASYOULIKEIT_FORMAT`` environment variable.** The
+decorator consults ``ASYOULIKEIT_FORMAT`` before falling back to the
+TTY check, so a session-wide, conftest-wide, or even test-wide
+override is one line away:
+
+.. code-block:: python
+
+   # conftest.py — force display mode for every test in the suite
+   import os
+   os.environ["ASYOULIKEIT_FORMAT"] = "display"
+
+   # or per-test with pytest's monkeypatch fixture
+   def test_display_layout(runner, monkeypatch):
+       monkeypatch.setenv("ASYOULIKEIT_FORMAT", "display")
+       result = runner.invoke(cli, ["my-command", "input"])
+       assert "My Title" in result.output
+
+Precedence: an explicit ``--as`` on the command line still wins over
+``ASYOULIKEIT_FORMAT``, so individual tests can opt out of a
+suite-wide default without interference. An invalid value in the env
+var fails fast with a clear error rather than silently falling back,
+so typos don't quietly change which rendering path a test exercises.
