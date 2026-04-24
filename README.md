@@ -52,7 +52,7 @@ from asyoulikeit import (
 
 
 @click.command()
-@report_output
+@report_output(reports={"wives": "The six wives of Henry VIII."})
 def list_wives():
     """List the six wives of Henry VIII."""
     data = (
@@ -223,7 +223,9 @@ from asyoulikeit import (
 
 
 @click.command()
-@report_output
+@report_output(reports={
+    "dukes": "The two ducal lines of Shakespeare's As You Like It.",
+})
 def list_dukes():
     """List the ducal families from 'As You Like It'."""
     tree = (

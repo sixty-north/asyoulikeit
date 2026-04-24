@@ -229,57 +229,66 @@ def report_output(
 ) -> Callable:
     """Decorator factory for commands that return tabular output.
 
-    This decorator adds formatting options and handles output display.
+    ``reports=`` is **required**: every ``@report_output`` command must
+    declare which report names it produces, as a mapping of ``{name:
+    description}``. Use ``Ellipsis`` as a key to declare "this command
+    also produces dynamically-named reports" (e.g. one report per input
+    file), or pass an empty dict for an action command that returns
+    ``None``. There is no back-compat fallback; the declaration lets
+    the library validate ``--report`` values, generate help, run drift
+    detection, and power the sibling introspection commands.
+
     The decorated function should return:
-    - Reports: A Reports object containing one or more named reports
-    - None: Silent success (nothing displayed)
+
+    - :class:`Reports` — one or more named reports (each key must be
+      declared in ``reports=`` or admitted by an ``Ellipsis`` slot).
+    - ``None`` — silent success (nothing displayed).
 
     Args:
-        func: The function to decorate (when used without parentheses)
-        default_reports: Which reports to show by default when no --report flags specified:
-            - ALL_REPORTS: Show all reports (default, for reporting commands)
-            - None: Show no reports (silent by default, for action commands)
-            - Iterable[str]: Show only these named reports by default
-        reports: Optional mapping of ``{name: description}`` declaring the
-            report names this command produces. Keys must be valid Python
-            identifiers; use ``Ellipsis`` as a key to declare "this command
-            also produces dynamic reports whose names are known only at
-            runtime" (e.g. one report per input file). Declaring ``reports=``
-            opts a command into decoration-time validation (typos in declared
-            names fail fast), a ``Produces reports:`` block appended to
-            ``--help``, ``click.Choice`` validation on ``--report`` when the
-            declaration is fully static, and runtime drift detection — a
-            returned :class:`Reports` containing an undeclared name (without
-            an ``Ellipsis`` slot admitting it) raises
-            :exc:`ReportDeclarationError`. Omitting ``reports=`` preserves
-            today's free-form behaviour: unknown ``--report`` values warn to
-            stderr and exit silently.
+        func: The function to decorate (when used without parentheses
+            a ``reports=`` kwarg must be supplied — otherwise the
+            decoration raises :exc:`ReportDeclarationError`).
+        default_reports: Which reports to show by default when no
+            ``--report`` flags are specified. ``ALL_REPORTS`` (the
+            default) shows every report; ``None`` shows nothing (silent
+            action command); an iterable of names restricts the default
+            to those names. Entries that aren't in ``reports=`` raise
+            at decoration time.
+        reports: Mapping of ``{name: description}`` declaring the
+            report names this command produces. Keys must be valid
+            Python identifiers; ``Ellipsis`` as a key declares the
+            "dynamic slot" (names known only at runtime). The
+            declaration drives decoration-time validation,
+            ``--help`` generation, parse-time ``click.Choice`` on
+            ``--report`` when fully static, and runtime drift detection
+            at the return boundary — undeclared names (and no
+            ``Ellipsis`` slot admitting them) raise
+            :exc:`ReportDeclarationError`.
 
     Adds these CLI options:
-    - --as: Selects the output format (display, tsv, json)
-    - --detailed/--essential: Controls which columns are included (overrides report defaults)
-    - --header/--no-header: Controls whether headers are emitted (overrides report defaults)
-    - --report: Filters which reports to display (can be specified multiple times). Hyphens are normalised to underscores (``--report monthly-sales`` resolves to ``monthly_sales``) regardless of whether ``reports=`` is declared.
 
-    The --as option defaults intelligently based on TTY detection.
-    The detail level defaults to AUTO, allowing each formatter to decide its default behavior.
-    Header behavior is format-specific: TSV prefixes first header cell with "#",
-    display omits headers/title/caption, JSON ignores the flag.
+    - ``--as`` — output format (display / tsv / json). Defaults to
+      ``display`` for terminals, ``tsv`` for pipes.
+    - ``--detailed`` / ``--essential`` — column inclusion override.
+    - ``--header`` / ``--no-header`` — header override.
+    - ``--report`` — filter which reports to display. Hyphens
+      normalise to underscores (``--report monthly-sales`` resolves
+      to ``monthly_sales``).
+
+    Header behaviour is format-specific: TSV prefixes the first header
+    cell with ``#``, display omits title/caption when headers are off,
+    JSON ignores the flag.
 
     Examples:
-        ``@report_output`` — show all reports (reporting command).
-
-        ``@report_output(default_reports=ALL_REPORTS)`` — same, explicit.
-
-        ``@report_output(default_reports=None)`` — silent by default (action command).
-
-        ``@report_output(default_reports=["outputs"])`` — show only ``outputs`` by default.
-
-        ``@report_output(reports={"summary": "…", "courses": "…"})`` — declare a static set.
+        ``@report_output(reports={"users": "The system's users."})`` — one static report.
 
         ``@report_output(reports={"overall": "…", Ellipsis: "…"})`` — mixed static + dynamic.
+
+        ``@report_output(reports={Ellipsis: "One per input file."})`` — purely dynamic.
+
+        ``@report_output(reports={}, default_reports=None)`` — silent action command.
     """
-    # Decorator factory pattern: if called with parentheses, func is None
+    # Decorator factory pattern: if called with parentheses, func is None.
     if func is None:
         return functools.partial(
             report_output,
@@ -287,20 +296,27 @@ def report_output(
             reports=reports,
         )
 
-    # Validate the reports= declaration shape first so typos in the
-    # decoration surface before default_reports is checked against it.
-    if reports is not None:
-        _validate_reports_declaration(reports)
-        declared_static = frozenset(
-            k for k in reports.keys() if isinstance(k, str)
+    # reports= is mandatory. The bare @report_output form (no
+    # parentheses, no kwargs) reaches this branch with reports=None;
+    # catch it here with a clear message rather than at first
+    # invocation.
+    if reports is None:
+        raise ReportDeclarationError(
+            f"@report_output requires a reports= declaration. "
+            f"For command {func.__name__!r}, pass one of:\n"
+            "  reports={'my_report': 'description'}          # one static report\n"
+            "  reports={Ellipsis: 'One report per input.'}   # dynamic names\n"
+            "  reports={}                                    # action command returning None"
         )
-        _validate_default_reports_against_declaration(
-            default_reports, declared_static
-        )
-        accepts_dynamic_reports = Ellipsis in reports.keys()
-    else:
-        declared_static = frozenset()
-        accepts_dynamic_reports = True  # back-compat: no declaration = permissive
+
+    _validate_reports_declaration(reports)
+    declared_static = frozenset(
+        k for k in reports.keys() if isinstance(k, str)
+    )
+    _validate_default_reports_against_declaration(
+        default_reports, declared_static
+    )
+    accepts_dynamic_reports = Ellipsis in reports.keys()
 
     # Normalize to Container at decoration time for efficient runtime checking
     if default_reports is ALL_REPORTS:
@@ -350,9 +366,11 @@ def report_output(
 
     # Build the --report option type. When the declaration is fully
     # static (no Ellipsis), use click.Choice so typos fail at parse
-    # with a clean error listing valid names. Otherwise fall back to
-    # plain strings so dynamic names still pass through.
-    if reports is not None and not accepts_dynamic_reports and declared_static:
+    # with a clean error listing valid names. A declaration with an
+    # Ellipsis slot keeps the option un-Choiced so runtime-resolved
+    # names pass through; an empty declaration (action command) also
+    # stays un-Choiced since there are no valid values to enumerate.
+    if not accepts_dynamic_reports and declared_static:
         report_type = _ReportChoice(sorted(declared_static))
         report_help = (
             "Report name(s) to display (can be specified multiple times). "
@@ -417,16 +435,14 @@ def report_output(
                     f"not {type(result).__name__}"
                 )
 
-            # Drift detection: when a reports= declaration exists, any
-            # returned name that isn't in the declared static set (and
-            # isn't admitted by an Ellipsis slot) is a hard failure.
-            # Declaration-less commands skip this check entirely.
-            if reports is not None:
-                _check_drift(
-                    result,
-                    reports,
-                    command_name=(func.__name__ or "<anonymous>").replace("_", "-"),
-                )
+            # Drift detection: any returned name that isn't in the
+            # declared static set (and isn't admitted by an Ellipsis
+            # slot) is a hard failure.
+            _check_drift(
+                result,
+                reports,
+                command_name=(func.__name__ or "<anonymous>").replace("_", "-"),
+            )
 
             # Determine which reports to show using Container protocol
             if report:
@@ -503,8 +519,9 @@ def report_output(
     # appears in Click's --help output. Click only reads its `epilog`
     # from the @click.command() kwarg, which we can't set from inside
     # this decorator — the docstring is the one surface we can influence
-    # that Click actually renders.
-    if reports is not None:
+    # that Click actually renders. Commands with reports={} (action
+    # commands) get no block since there's nothing to list.
+    if reports:
         epilog = _build_reports_epilog(reports)
         existing_doc = (wrapper.__doc__ or "").rstrip()
         wrapper.__doc__ = (
@@ -535,7 +552,9 @@ def list_formatters_command() -> click.Command:
     ``--as``'s choices.
     """
     @click.command()
-    @report_output
+    @report_output(reports={
+        "formatters": "Registered report-output formatters with one-line descriptions.",
+    })
     def list_formatters():
         """List the available report output formatters."""
         table = (
@@ -574,7 +593,9 @@ def describe_formatter_command() -> click.Command:
         "name",
         type=click.Choice(formatter_names(), case_sensitive=False),
     )
-    @report_output
+    @report_output(reports={
+        "formatter": "The full description of one registered formatter.",
+    })
     def describe(name: str):
         """Describe a specific report output formatter."""
         return Reports(formatter=Report(data=ScalarContent(
@@ -625,9 +646,13 @@ def list_reports_command() -> click.Command:
     format. The payload is a :class:`~asyoulikeit.TreeContent` with one
     root node per ``@report_output`` command discovered under the root
     Click group and children for each declared report (name +
-    description). Commands without a ``reports=`` declaration surface
-    with a single ``<undeclared>`` child so users know which commands
-    haven't opted in.
+    description). Because ``reports=`` is required on every
+    ``@report_output`` command, every discovered report-output command
+    shows its declared names; a group may also contain plain
+    ``@click.command`` commands that aren't asyoulikeit-aware, and
+    those surface with a single ``<not a report-output command>``
+    marker child. Action commands declared with ``reports={}`` show
+    ``<no reports>``.
 
     The host CLI adds it under whatever name suits it::
 
@@ -678,7 +703,20 @@ def list_reports_command() -> click.Command:
             root_node = tree.add_root(name=display_name, description=short_help)
             declaration = _declared_reports(cmd)
             if declaration is None:
-                root_node.add_child(name="<undeclared>", description="(reports= not declared)")
+                # Command wasn't decorated with @report_output at all
+                # (e.g. a plain @click.command that the host added to
+                # the same group). Surface it so authors can see which
+                # of their commands sit outside asyoulikeit.
+                root_node.add_child(
+                    name="<not a report-output command>",
+                    description="(command is not decorated with @report_output)",
+                )
+                continue
+            if not declaration:
+                root_node.add_child(
+                    name="<no reports>",
+                    description="(action command — returns None)",
+                )
                 continue
             static_names = sorted(
                 k for k in declaration.keys() if isinstance(k, str)

@@ -41,7 +41,7 @@ there is to it.
 
 
    @click.command()
-   @report_output
+   @report_output(reports={"users": "The users of the system."})
    def list_users():
        """List the users of the system."""
        data = (
@@ -140,11 +140,14 @@ passes ``--report`` multiple times.
        roles=Report(data=roles_data),
    )
 
-Use ``@report_output(default_reports=None)`` to make a command
-silent by default — useful for action commands that should produce no
-visible output unless the user asks for a specific report. Use
-``@report_output(default_reports=["users"])`` to show only a
-specific subset by default.
+Pass ``default_reports=None`` alongside ``reports=`` to make a command
+silent by default — useful for action commands. Pass an iterable like
+``default_reports=["users"]`` to show only a specific subset by default.
+Either way, the names must appear in the ``reports=`` declaration (or
+be admitted by the ``Ellipsis`` slot); a typo raises
+:exc:`~asyoulikeit.ReportDeclarationError` at decoration time. Action
+commands that never return a :class:`~asyoulikeit.Reports` (always
+``None``) declare ``reports={}``.
 
 
 .. _tree-content:
@@ -167,7 +170,7 @@ instead of a flat list.
    )
 
    @click.command()
-   @report_output
+   @report_output(reports={"fs": "A filesystem subtree."})
    def list_usr():
        tree = (
            TreeContent(title="/usr")
@@ -246,7 +249,7 @@ instead:
    )
 
    @click.command()
-   @report_output
+   @report_output(reports={"title": "The disc image's title."})
    @click.argument("image")
    def disc_title(image):
        return Reports(title=Report(data=ScalarContent(
@@ -324,10 +327,13 @@ in the ``--as`` choices of every command decorated with
 Declaring reports
 -----------------
 
-A CLI built with ``@report_output`` accepts ``--report <name>`` but
-users have no way to discover which names are valid — ``--help`` shows
-the flag, not its domain. You can declare the set explicitly by passing
-a ``reports=`` mapping of ``name → description`` to ``@report_output``:
+Every ``@report_output`` command **must** declare the report names it
+produces via a ``reports=`` mapping of ``name → description``.
+Omitting the declaration raises
+:exc:`~asyoulikeit.ReportDeclarationError` at decoration time — there
+is no back-compat fallback. This keeps the declaration honest and
+lets the library validate ``--report`` values, generate help, and
+run drift detection without guesswork.
 
 .. code-block:: python
 
@@ -347,7 +353,7 @@ a ``reports=`` mapping of ``name → description`` to ``@report_output``:
            structure=Report(data=...),
        )
 
-Declaring ``reports=`` opts the command into four behaviours:
+The declaration drives four behaviours:
 
 - **Decoration-time validation.** Non-identifier keys, non-string
   descriptions, and ``default_reports`` entries that refer to an
@@ -357,13 +363,19 @@ Declaring ``reports=`` opts the command into four behaviours:
   appended to the command's help text, listing each declared name with
   its description.
 - **Parse-time validation on** ``--report``. When the declaration is
-  fully static, ``--report`` becomes a ``click.Choice`` — typos fail at
-  parse with Click's list of valid values.
+  fully static (no ``Ellipsis`` slot), ``--report`` becomes a
+  ``click.Choice`` — typos fail at parse with Click's list of valid
+  values.
 - **Runtime drift detection.** If the handler returns a
   :class:`~asyoulikeit.Reports` whose keys don't match the declaration
   (and no ``Ellipsis`` slot was declared, see below),
   :exc:`~asyoulikeit.ReportDeclarationError` is raised — catching the
   refactor-renamed-a-report-silently bug.
+
+For action commands that always return ``None`` (no reports ever),
+declare ``reports={}``: the declaration is empty, the ``Produces
+reports:`` help block is suppressed, and any accidental future return
+of a named report will trip drift detection.
 
 Dynamic report names
 ~~~~~~~~~~~~~~~~~~~~
@@ -403,8 +415,7 @@ Hyphens on the command line
 Python identifiers can't contain hyphens, but CLI convention strongly
 prefers them. ``asyoulikeit`` normalises ``--report`` values
 automatically: ``--report monthly-sales`` resolves to the declared
-``monthly_sales`` report. The normalisation applies whether or not
-``reports=`` is declared.
+``monthly_sales`` report.
 
 Discovering reports: ``list-reports`` and ``describe-report``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -439,9 +450,11 @@ and render in any format:
    $ mytool describe-report video-audit courses
    $ mytool describe-report video-audit '<dynamic>'   # describe the Ellipsis slot
 
-Commands that don't declare ``reports=`` surface in ``list-reports``
-with a single ``<undeclared>`` child, so authors can see which of
-their commands haven't opted in yet.
+A host group may also contain plain ``@click.command`` commands that
+aren't asyoulikeit-aware; those surface in ``list-reports`` with a
+single ``<not a report-output command>`` marker child, so authors can
+see at a glance which commands sit outside the library. Action
+commands declared with ``reports={}`` show ``<no reports>``.
 
 
 .. _formatter-introspection:

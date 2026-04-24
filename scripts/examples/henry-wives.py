@@ -22,7 +22,7 @@ from asyoulikeit import (
 
 
 @click.command()
-@report_output
+@report_output(reports={"wives": "The six wives of Henry VIII."})
 def list_wives():
     """List the six wives of Henry VIII."""
     data = (

@@ -17,7 +17,7 @@ Example::
     )
 
     @click.command()
-    @report_output
+    @report_output(reports={"title": "The disc image's title."})
     def disc_title(image):
         return Reports(title=Report(data=ScalarContent(
             value=_read_title(image),

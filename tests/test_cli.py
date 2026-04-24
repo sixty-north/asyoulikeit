@@ -48,7 +48,7 @@ class TestFormatSelection:
 
     def test_as_tsv_output_shape(self):
         @click.command()
-        @report_output
+        @report_output(reports={Ellipsis: "Test reports"})
         def cmd():
             return _make_people_reports()
 
@@ -67,7 +67,7 @@ class TestFormatSelection:
 
     def test_as_json_output_shape(self):
         @click.command()
-        @report_output
+        @report_output(reports={Ellipsis: "Test reports"})
         def cmd():
             return _make_people_reports()
 
@@ -83,7 +83,7 @@ class TestFormatSelection:
 
     def test_as_display_renders(self):
         @click.command()
-        @report_output
+        @report_output(reports={Ellipsis: "Test reports"})
         def cmd():
             return _make_people_reports()
 
@@ -99,7 +99,7 @@ class TestSmartDefaultFormat:
     def test_default_is_tsv_when_not_a_tty(self):
         """CliRunner's captured stdout reports isatty() == False, so default is tsv."""
         @click.command()
-        @report_output
+        @report_output(reports={Ellipsis: "Test reports"})
         def cmd():
             data = TableContent().add_column("x", "X").add_row(x=1)
             return Reports(only=Report(data=data))
@@ -122,7 +122,7 @@ class TestSmartDefaultFormat:
         monkeypatch.setattr("asyoulikeit.cli.sys", fake_sys)
 
         @click.command()
-        @report_output
+        @report_output(reports={Ellipsis: "Test reports"})
         def cmd():
             data = TableContent().add_column("x", "X").add_row(x=1)
             return Reports(only=Report(data=data))
@@ -143,7 +143,7 @@ class TestFormatEnvVarOverride:
     @staticmethod
     def _cmd():
         @click.command()
-        @report_output
+        @report_output(reports={Ellipsis: "Test reports"})
         def cmd():
             data = TableContent().add_column("x", "X").add_row(x=1)
             return Reports(only=Report(data=data))
@@ -205,7 +205,7 @@ class TestHeaderToggle:
 
     def test_header_on_by_default(self):
         @click.command()
-        @report_output
+        @report_output(reports={Ellipsis: "Test reports"})
         def cmd():
             data = TableContent().add_column("x", "X").add_row(x=1)
             return Reports(only=Report(data=data))
@@ -215,7 +215,7 @@ class TestHeaderToggle:
 
     def test_no_header_suppresses_tsv_header_row(self):
         @click.command()
-        @report_output
+        @report_output(reports={Ellipsis: "Test reports"})
         def cmd():
             data = TableContent().add_column("x", "X").add_row(x=1)
             return Reports(only=Report(data=data))
@@ -230,7 +230,7 @@ class TestHeaderToggle:
         from asyoulikeit import ScalarContent
 
         @click.command()
-        @report_output
+        @report_output(reports={Ellipsis: "Test reports"})
         def cmd():
             return Reports(
                 load=Report(data=ScalarContent("00001900", title="Load"))
@@ -246,7 +246,7 @@ class TestHeaderToggle:
         from asyoulikeit import ScalarContent
 
         @click.command()
-        @report_output
+        @report_output(reports={Ellipsis: "Test reports"})
         def cmd():
             return Reports(
                 load=Report(data=ScalarContent("00001900", title="Load"))
@@ -263,7 +263,7 @@ class TestDetailLevelFiltering:
 
     def test_detailed_includes_detail_columns_and_rows_in_tsv(self):
         @click.command()
-        @report_output
+        @report_output(reports={Ellipsis: "Test reports"})
         def cmd():
             return _make_people_reports()
 
@@ -276,7 +276,7 @@ class TestDetailLevelFiltering:
 
     def test_essential_excludes_detail_columns_and_rows_in_json(self):
         @click.command()
-        @report_output
+        @report_output(reports={Ellipsis: "Test reports"})
         def cmd():
             return _make_people_reports()
 
@@ -295,7 +295,7 @@ class TestReportSelection:
 
     def test_report_flag_restricts_output(self):
         @click.command()
-        @report_output
+        @report_output(reports={Ellipsis: "Test reports"})
         def cmd():
             return _make_people_reports()
 
@@ -308,7 +308,7 @@ class TestReportSelection:
 
     def test_unknown_report_emits_warning_and_exits(self):
         @click.command()
-        @report_output
+        @report_output(reports={Ellipsis: "Test reports"})
         def cmd():
             return _make_people_reports()
 
@@ -323,7 +323,7 @@ class TestReportSelection:
 
     def test_report_flag_can_be_specified_multiple_times(self):
         @click.command()
-        @report_output
+        @report_output(reports={Ellipsis: "Test reports"})
         def cmd():
             return _make_people_reports()
 
@@ -341,7 +341,10 @@ class TestDefaultReportsOption:
     def test_silent_by_default_when_none(self):
         """@report_output(default_reports=None) produces no output by default."""
         @click.command()
-        @report_output(default_reports=None)
+        @report_output(
+            default_reports=None,
+            reports={"people": "People", "colors": "Colors"},
+        )
         def cmd():
             return _make_people_reports()
 
@@ -351,7 +354,10 @@ class TestDefaultReportsOption:
 
     def test_silent_mode_still_honors_report_flag(self):
         @click.command()
-        @report_output(default_reports=None)
+        @report_output(
+            default_reports=None,
+            reports={"people": "People", "colors": "Colors"},
+        )
         def cmd():
             return _make_people_reports()
 
@@ -362,7 +368,10 @@ class TestDefaultReportsOption:
 
     def test_named_default_reports_limits_output(self):
         @click.command()
-        @report_output(default_reports=["colors"])
+        @report_output(
+            default_reports=["colors"],
+            reports={"people": "People", "colors": "Colors"},
+        )
         def cmd():
             return _make_people_reports()
 
@@ -372,15 +381,18 @@ class TestDefaultReportsOption:
         assert "# Name" not in result.output
 
     def test_all_reports_sentinel_is_default(self):
-        """@report_output and @report_output(default_reports=ALL_REPORTS)
-        produce the same output."""
+        """``default_reports=ALL_REPORTS`` (the default) and leaving it
+        unset produce the same output."""
         @click.command()
-        @report_output
+        @report_output(reports={Ellipsis: "Test reports"})
         def bare():
             return _make_people_reports()
 
         @click.command()
-        @report_output(default_reports=ALL_REPORTS)
+        @report_output(
+            default_reports=ALL_REPORTS,
+            reports={Ellipsis: "Test reports"},
+        )
         def explicit():
             return _make_people_reports()
 
@@ -396,7 +408,7 @@ class TestReturnContract:
 
     def test_none_return_produces_no_output(self):
         @click.command()
-        @report_output
+        @report_output(reports={Ellipsis: "Test reports"})
         def cmd():
             return None
 
@@ -406,7 +418,7 @@ class TestReturnContract:
 
     def test_non_reports_return_raises_type_error(self):
         @click.command()
-        @report_output
+        @report_output(reports={Ellipsis: "Test reports"})
         def cmd():
             return "not a Reports"
 
@@ -422,7 +434,7 @@ class TestReportOverrides:
     def test_header_flag_overrides_report_header_preference(self):
         """A report with header=True is overridden by --no-header."""
         @click.command()
-        @report_output
+        @report_output(reports={Ellipsis: "Test reports"})
         def cmd():
             data = TableContent().add_column("x", "X").add_row(x=1)
             return Reports(only=Report(data=data, header=True))
@@ -434,7 +446,7 @@ class TestReportOverrides:
     def test_detail_level_flag_overrides_report_detail_preference(self):
         """A report asking for ESSENTIAL is overridden by --detailed."""
         @click.command()
-        @report_output
+        @report_output(reports={Ellipsis: "Test reports"})
         def cmd():
             data = (
                 TableContent()
@@ -542,14 +554,32 @@ class TestReportsDeclarationHelp:
         assert "<dynamic>" in result.output
         assert "Per-input dynamic" in result.output
 
-    def test_declaration_less_command_has_no_produces_block(self):
+    def test_empty_declaration_has_no_produces_block(self):
+        # An action command with reports={} (no reports) omits the
+        # "Produces reports:" block — nothing to list.
         @click.command()
-        @report_output
+        @report_output(reports={})
         def cmd():
             """A plain command."""
 
         result = CliRunner().invoke(cmd, ["--help"])
         assert "Produces reports:" not in result.output
+
+    def test_bare_report_output_without_declaration_fails_at_decoration(self):
+        from asyoulikeit import ReportDeclarationError
+        # @report_output with no reports= kwarg is no longer allowed.
+        with pytest.raises(ReportDeclarationError) as excinfo:
+            @report_output
+            def cmd():
+                return Reports()
+        assert "reports=" in str(excinfo.value)
+
+    def test_report_output_with_parens_but_no_reports_fails(self):
+        from asyoulikeit import ReportDeclarationError
+        with pytest.raises(ReportDeclarationError):
+            @report_output()
+            def cmd():
+                return Reports()
 
 
 class TestReportChoiceValidation:
@@ -595,14 +625,18 @@ class TestReportChoiceValidation:
         # Unknown name at runtime → current behaviour: warn to stderr, exit 0.
         assert result.exit_code == 0
 
-    def test_declaration_less_command_keeps_free_form_behaviour(self):
+    def test_dynamic_only_declaration_accepts_any_report_flag_value(self):
+        # With an Ellipsis-only declaration (no static names), --report
+        # stays un-Choiced so arbitrary names pass through; an unknown
+        # name at runtime warns to stderr and exits 0, matching the
+        # behaviour when --report is un-Choiced for declaration-less
+        # commands in prior versions.
         @click.command()
-        @report_output
+        @report_output(reports={Ellipsis: "Dynamic only"})
         def cmd():
             return Reports(a=Report(data=TableContent().add_column("k", "k").add_row(k="x")))
 
         result = CliRunner().invoke(cmd, ["--report", "b"])
-        # Legacy: unknown --report warns, exits 0.
         assert result.exit_code == 0
 
 
@@ -621,9 +655,12 @@ class TestReportHyphenNormalisation:
         assert result.exit_code == 0
         assert "x" in result.output
 
-    def test_declaration_less_command_also_normalises(self):
+    def test_dynamic_declaration_also_normalises(self):
+        # Hyphen→underscore also applies when the declaration is
+        # dynamic-only (no click.Choice in the pipeline). The callback
+        # does the rewriting before the handler sees the value.
         @click.command()
-        @report_output
+        @report_output(reports={Ellipsis: "Dynamic"})
         def cmd():
             return Reports(
                 monthly_sales=Report(data=TableContent().add_column("k", "k").add_row(k="x")),
@@ -676,10 +713,11 @@ class TestReportsDriftDetection:
         result = CliRunner().invoke(cmd, ["--as", "tsv"])
         assert result.exit_code == 0
 
-    def test_declaration_less_command_does_not_drift_check(self):
-        # Back-compat: no declaration → no drift detection, silent warn on --report.
+    def test_dynamic_only_declaration_admits_all_names(self):
+        # An Ellipsis-only declaration means every returned name is
+        # admitted — drift detection still runs, it just always passes.
         @click.command()
-        @report_output
+        @report_output(reports={Ellipsis: "Dynamic only"})
         def cmd():
             return Reports(
                 anything=Report(data=TableContent().add_column("k", "k").add_row(k="x")),
@@ -725,11 +763,22 @@ class TestListReportsCommand:
                 anything=Report(data=TableContent().add_column("k", "K").add_row(k="z")),
             )
 
+        # A plain click.command that's not an asyoulikeit command at
+        # all — exercises the "<not a report-output command>" path in
+        # list-reports for groups that mix report-output commands with
+        # ordinary click commands.
         @click.command()
-        @report_output
-        def legacy():
-            """Command without a declaration."""
-            return Reports(a=Report(data=TableContent().add_column("k", "K").add_row(k="z")))
+        def plain():
+            """Plain command (not a @report_output command)."""
+            click.echo("ran plain")
+
+        # An action command with reports={} — exercises the
+        # "<no reports>" path.
+        @click.command()
+        @report_output(reports={}, default_reports=None)
+        def act():
+            """Pure action command — returns None."""
+            return None
 
         @click.group()
         def cli():
@@ -737,7 +786,8 @@ class TestListReportsCommand:
 
         cli.add_command(audit, name="audit")
         cli.add_command(validate, name="validate")
-        cli.add_command(legacy, name="legacy")
+        cli.add_command(plain, name="plain")
+        cli.add_command(act, name="act")
         cli.add_command(list_reports_command(), name="list-reports")
         return cli
 
@@ -764,11 +814,17 @@ class TestListReportsCommand:
         assert "<dynamic>" in result.output
         assert "One report per input" in result.output
 
-    def test_declaration_less_command_marked_undeclared(self):
+    def test_non_report_output_command_marked_as_not_asyoulikeit(self):
         cli = self._make_cli()
         result = CliRunner().invoke(cli, ["list-reports", "--as", "tsv"])
-        assert "legacy" in result.output
-        assert "<undeclared>" in result.output
+        assert "plain" in result.output
+        assert "<not a report-output command>" in result.output
+
+    def test_action_command_with_empty_declaration_marked_no_reports(self):
+        cli = self._make_cli()
+        result = CliRunner().invoke(cli, ["list-reports", "--as", "tsv"])
+        assert "act" in result.output
+        assert "<no reports>" in result.output
 
     def test_list_reports_excludes_itself_from_listing(self):
         # The introspection command must not appear in its own output.
@@ -783,7 +839,8 @@ class TestListReportsCommand:
         assert "summary" in result.output
         # Other commands are filtered out.
         assert "validate" not in result.output
-        assert "legacy" not in result.output
+        assert "plain" not in result.output
+        assert "act" not in result.output
 
     def test_unknown_command_in_filter_fails_cleanly(self):
         cli = self._make_cli()
@@ -801,7 +858,8 @@ class TestListReportsCommand:
         root_names = [root["values"]["name"] for root in report["roots"]]
         assert "audit" in root_names
         assert "validate" in root_names
-        assert "legacy" in root_names
+        assert "plain" in root_names
+        assert "act" in root_names
 
     def test_display_output_contains_each_declared_name(self):
         cli = self._make_cli()
@@ -840,17 +898,18 @@ class TestDescribeReportCommand:
                 summary=Report(data=TableContent().add_column("k", "K").add_row(k="x")),
             )
 
+        # A plain click.command, not a @report_output — exercises
+        # describe-report's "command has no reports= declaration" path.
         @click.command()
-        @report_output
-        def legacy():
-            return Reports(a=Report(data=TableContent().add_column("k", "K").add_row(k="y")))
+        def plain():
+            click.echo("ran plain")
 
         @click.group()
         def cli():
             pass
 
         cli.add_command(audit, name="audit")
-        cli.add_command(legacy, name="legacy")
+        cli.add_command(plain, name="plain")
         cli.add_command(describe_report_command(), name="describe-report")
         return cli
 
@@ -954,13 +1013,15 @@ class TestDescribeReportCommand:
         assert result.exit_code != 0
         assert "dynamic" in result.output.lower() or "Ellipsis" in result.output
 
-    def test_command_without_declaration_fails_cleanly(self):
+    def test_non_report_output_command_fails_cleanly(self):
+        # A plain @click.command (not @report_output) has no declaration
+        # to describe — should fail with a clear message, not a crash.
         cli = self._make_cli()
         result = CliRunner().invoke(
-            cli, ["describe-report", "legacy", "a"]
+            cli, ["describe-report", "plain", "anything"]
         )
         assert result.exit_code != 0
-        assert "legacy" in result.output
+        assert "plain" in result.output
         assert "declaration" in result.output.lower() or "declared" in result.output.lower()
 
     def test_not_attached_to_group_is_type_error(self):
