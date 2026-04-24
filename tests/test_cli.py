@@ -461,6 +461,91 @@ class TestReportOverrides:
         assert "hello" in result.output
 
 
+class TestNoReportsFlag:
+    """--no-reports suppresses output while still running the handler."""
+
+    def _action_command(self, side_effects: list):
+        @click.command()
+        @report_output(reports={"summary": "Confirmation of the action."})
+        def action():
+            side_effects.append("ran")
+            return Reports(
+                summary=Report(
+                    data=TableContent().add_column("k", "K").add_row(k="ok")
+                ),
+            )
+        return action
+
+    def test_suppresses_all_output(self):
+        side_effects = []
+        cmd = self._action_command(side_effects)
+        result = CliRunner().invoke(cmd, ["--no-reports", "--as", "tsv"])
+        assert result.exit_code == 0
+        # No output at all — not even the "# K" header line.
+        assert result.output == ""
+
+    def test_handler_still_runs(self):
+        # The whole point: action commands whose reports are incidental
+        # should still execute their side effects under --no-reports.
+        side_effects = []
+        cmd = self._action_command(side_effects)
+        result = CliRunner().invoke(cmd, ["--no-reports"])
+        assert result.exit_code == 0
+        assert side_effects == ["ran"]
+
+    def test_conflict_with_report_flag(self):
+        side_effects = []
+        cmd = self._action_command(side_effects)
+        result = CliRunner().invoke(
+            cmd, ["--no-reports", "--report", "summary"]
+        )
+        assert result.exit_code != 0
+        assert "mutually exclusive" in result.output
+        # Handler must not run when usage is invalid.
+        assert side_effects == []
+
+    def test_drift_detection_still_runs(self):
+        # A buggy return that violates the declaration should still be
+        # caught even when --no-reports is set. Catching drift is
+        # development-time insurance; suppressing output doesn't
+        # suppress validation.
+        from asyoulikeit import ReportDeclarationError
+
+        @click.command()
+        @report_output(reports={"summary": "s"})
+        def drifted():
+            return Reports(
+                summary=Report(data=TableContent().add_column("k", "K").add_row(k="x")),
+                extra=Report(data=TableContent().add_column("k", "K").add_row(k="y")),
+            )
+
+        result = CliRunner().invoke(drifted, ["--no-reports"])
+        assert result.exit_code != 0
+        assert isinstance(result.exception, ReportDeclarationError)
+        assert "extra" in str(result.exception)
+
+    def test_handler_returning_none_is_silent_regardless(self):
+        # Action command that always returns None — --no-reports is a
+        # harmless no-op.
+        @click.command()
+        @report_output(reports={}, default_reports=None)
+        def silent_act():
+            return None
+
+        result = CliRunner().invoke(silent_act, ["--no-reports"])
+        assert result.exit_code == 0
+        assert result.output == ""
+
+    def test_flag_appears_in_help(self):
+        @click.command()
+        @report_output(reports={"summary": "s"})
+        def cmd():
+            return Reports(summary=Report(data=TableContent().add_column("k", "K").add_row(k="x")))
+
+        result = CliRunner().invoke(cmd, ["--help"])
+        assert "--no-reports" in result.output
+
+
 class TestReportsDeclarationValidation:
     """Decoration-time validation of the reports= declaration."""
 

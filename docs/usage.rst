@@ -149,6 +149,16 @@ be admitted by the ``Ellipsis`` slot); a typo raises
 commands that never return a :class:`~asyoulikeit.Reports` (always
 ``None``) declare ``reports={}``.
 
+Users who want to run a command purely for its side effects — say, an
+``import`` command whose confirmation report is useful interactively
+but noise in a CI pipeline — can pass ``--no-reports`` on the command
+line. The handler still runs; only the rendering is suppressed. Drift
+detection and the :class:`~asyoulikeit.Reports` return-type check both
+still fire, so a buggy return isn't hidden by the flag.
+``--no-reports`` and ``--report`` are mutually exclusive: asking for
+specific reports and simultaneously suppressing all of them is
+incoherent, so the combination fails at parse.
+
 
 .. _tree-content:
 

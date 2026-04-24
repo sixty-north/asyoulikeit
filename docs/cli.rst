@@ -56,12 +56,32 @@ guide.
 Names one of the reports the command produces. Pass it multiple times
 to request several named reports. When omitted, the command's default
 — usually all reports — is shown. Unknown names produce a warning on
-stderr listing the reports that were actually available.
+stderr listing the reports that were actually available (when the
+command declared its reports statically, unknown names fail at parse
+with Click's list of valid values instead).
 
 .. code-block:: bash
 
    mytool status --report users                    # just the users table
    mytool status --report users --report groups    # both, in the order given
+
+
+``--no-reports``
+----------------
+
+Suppresses all report rendering while still running the handler. The
+use case is an action command whose reports are useful interactively
+but unwanted in other contexts — e.g. an ``import`` command that prints
+a summary of what was imported when run by a human, but whose output
+is noise in a CI pipeline where the import is logged elsewhere. The
+handler's side effects still run; drift detection and the return-type
+check still fire. Mutually exclusive with ``--report``: asking for
+specific reports and simultaneously suppressing all of them is
+incoherent, so the combination fails at parse.
+
+.. code-block:: bash
+
+   mytool import data.yaml --no-reports            # run the import, stay silent
 
 
 ``--header`` / ``--no-header``

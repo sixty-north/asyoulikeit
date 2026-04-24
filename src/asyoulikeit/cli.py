@@ -274,6 +274,10 @@ def report_output(
     - ``--report`` — filter which reports to display. Hyphens
       normalise to underscores (``--report monthly-sales`` resolves
       to ``monthly_sales``).
+    - ``--no-reports`` — suppress all report rendering while still
+      running the handler (useful for action commands whose reports
+      are incidental confirmation). Mutually exclusive with
+      ``--report``.
 
     Header behaviour is format-specific: TSV prefixes the first header
     cell with ``#``, display omits title/caption when headers are off,
@@ -386,44 +390,66 @@ def report_output(
 
     # Apply option group for tabulated output formatting
     decorated = REPORT_OUTPUT_GROUP.option(
-        "--report",
-        multiple=True,
-        type=report_type,
-        callback=_normalise_report_arg,
-        help=report_help,
+        "--no-reports",
+        "no_reports",
+        is_flag=True,
+        default=False,
+        help="Suppress all report output. The handler still runs (useful "
+             "for action commands whose reports are incidental); only "
+             "rendering is skipped. Mutually exclusive with --report.",
     )(
         REPORT_OUTPUT_GROUP.option(
-            "--header/--no-header",
-            "header",
-            default=None,  # None means use report's default
-            help="Include column headers in output. Overrides each report's default. "
-                 "Format-specific: TSV prefixes first cell with '#', "
-                 "display omits headers/title/caption, JSON ignores this flag.",
+            "--report",
+            multiple=True,
+            type=report_type,
+            callback=_normalise_report_arg,
+            help=report_help,
         )(
             REPORT_OUTPUT_GROUP.option(
-                "--detailed/--essential",
-                "detail_level",
-                default=None,
-                callback=map_detail_level,
-                help="Include detailed columns or only essential columns. "
-                     "Auto-detects based on output format if not specified."
+                "--header/--no-header",
+                "header",
+                default=None,  # None means use report's default
+                help="Include column headers in output. Overrides each report's default. "
+                     "Format-specific: TSV prefixes first cell with '#', "
+                     "display omits headers/title/caption, JSON ignores this flag.",
             )(
                 REPORT_OUTPUT_GROUP.option(
-                    "--as",
-                    "as_format",
-                    type=click.Choice(formatter_names(), case_sensitive=False),
+                    "--detailed/--essential",
+                    "detail_level",
                     default=None,
-                    callback=set_smart_default,
-                    help="Output format for tabular data. Defaults to 'display' for terminals, 'tsv' for pipes.",
-                )(func)
+                    callback=map_detail_level,
+                    help="Include detailed columns or only essential columns. "
+                         "Auto-detects based on output format if not specified."
+                )(
+                    REPORT_OUTPUT_GROUP.option(
+                        "--as",
+                        "as_format",
+                        type=click.Choice(formatter_names(), case_sensitive=False),
+                        default=None,
+                        callback=set_smart_default,
+                        help="Output format for tabular data. Defaults to 'display' for terminals, 'tsv' for pipes.",
+                    )(func)
+                )
             )
         )
     )
 
     # Wrap to consume format parameters and handle output
     @functools.wraps(decorated)
-    def wrapper(*args, as_format, detail_level, header, report, **kwargs):
-        # Call handler without format parameters
+    def wrapper(*args, as_format, detail_level, header, report, no_reports, **kwargs):
+        # --no-reports and --report are incoherent together: the user
+        # has asked to both suppress output entirely and to filter to a
+        # specific subset of it. Fail at the boundary so the handler
+        # doesn't run with a contradictory request.
+        if no_reports and report:
+            raise click.UsageError(
+                "--no-reports and --report are mutually exclusive: cannot "
+                "request specific reports and simultaneously suppress all of them."
+            )
+
+        # Call handler without format parameters. This runs even when
+        # --no-reports is set — the point of the flag is to let action
+        # commands do their work without printing confirmation reports.
         result = func(*args, **kwargs)
 
         # Format and display if data returned
@@ -437,12 +463,18 @@ def report_output(
 
             # Drift detection: any returned name that isn't in the
             # declared static set (and isn't admitted by an Ellipsis
-            # slot) is a hard failure.
+            # slot) is a hard failure. Runs even under --no-reports so
+            # a buggy return still surfaces in development.
             _check_drift(
                 result,
                 reports,
                 command_name=(func.__name__ or "<anonymous>").replace("_", "-"),
             )
+
+            # Rendering suppressed — we validated the shape but emit
+            # nothing. Handler side effects have already happened.
+            if no_reports:
+                return
 
             # Determine which reports to show using Container protocol
             if report:
