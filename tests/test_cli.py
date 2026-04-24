@@ -546,6 +546,92 @@ class TestNoReportsFlag:
         assert "--no-reports" in result.output
 
 
+class TestAllReportsFlag:
+    """--all-reports overrides a narrowing default_reports setting."""
+
+    def _two_report_command(self, **kw):
+        @click.command()
+        @report_output(
+            reports={"people": "People", "colors": "Colors"},
+            **kw,
+        )
+        def cmd():
+            return Reports(
+                people=Report(data=TableContent().add_column("n", "N").add_row(n="Alice")),
+                colors=Report(data=TableContent().add_column("c", "C").add_row(c="red")),
+            )
+        return cmd
+
+    def test_silent_default_shows_nothing_without_flag(self):
+        # Sanity check: default_reports=None is silent by default.
+        cmd = self._two_report_command(default_reports=None)
+        result = CliRunner().invoke(cmd, ["--as", "tsv"])
+        assert result.exit_code == 0
+        assert result.output == ""
+
+    def test_silent_default_plus_all_reports_shows_everything(self):
+        # The headline case: a command that defaults to silent can be
+        # driven to produce every report it has on a per-invocation basis.
+        cmd = self._two_report_command(default_reports=None)
+        result = CliRunner().invoke(cmd, ["--all-reports", "--as", "tsv"])
+        assert result.exit_code == 0
+        assert "Alice" in result.output
+        assert "red" in result.output
+
+    def test_narrow_default_plus_all_reports_shows_everything(self):
+        # default_reports=["colors"] normally shows only colors;
+        # --all-reports forces both.
+        cmd = self._two_report_command(default_reports=["colors"])
+
+        no_flag = CliRunner().invoke(cmd, ["--as", "tsv"])
+        assert "red" in no_flag.output
+        assert "Alice" not in no_flag.output
+
+        with_flag = CliRunner().invoke(cmd, ["--all-reports", "--as", "tsv"])
+        assert with_flag.exit_code == 0
+        assert "Alice" in with_flag.output
+        assert "red" in with_flag.output
+
+    def test_all_reports_is_noop_on_show_all_default(self):
+        # A command that already defaults to ALL_REPORTS produces the
+        # same output with or without --all-reports.
+        cmd = self._two_report_command()  # default_reports=ALL_REPORTS
+        no_flag = CliRunner().invoke(cmd, ["--as", "tsv"]).output
+        with_flag = CliRunner().invoke(cmd, ["--all-reports", "--as", "tsv"]).output
+        assert no_flag == with_flag
+        assert "Alice" in with_flag
+        assert "red" in with_flag
+
+    def test_conflict_with_report_flag(self):
+        cmd = self._two_report_command(default_reports=None)
+        result = CliRunner().invoke(
+            cmd, ["--all-reports", "--report", "people"]
+        )
+        assert result.exit_code != 0
+        assert "mutually exclusive" in result.output
+
+    def test_conflict_with_no_reports_flag(self):
+        cmd = self._two_report_command(default_reports=None)
+        result = CliRunner().invoke(
+            cmd, ["--all-reports", "--no-reports"]
+        )
+        assert result.exit_code != 0
+        assert "mutually exclusive" in result.output
+
+    def test_all_three_flags_conflict(self):
+        cmd = self._two_report_command(default_reports=None)
+        result = CliRunner().invoke(
+            cmd, ["--all-reports", "--no-reports", "--report", "people"]
+        )
+        assert result.exit_code != 0
+        assert "mutually exclusive" in result.output
+
+    def test_flag_appears_in_help(self):
+        cmd = self._two_report_command()
+        result = CliRunner().invoke(cmd, ["--help"])
+        assert "--all-reports" in result.output
+
+
 class TestReportsDeclarationValidation:
     """Decoration-time validation of the reports= declaration."""
 

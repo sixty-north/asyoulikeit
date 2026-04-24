@@ -75,13 +75,32 @@ but unwanted in other contexts — e.g. an ``import`` command that prints
 a summary of what was imported when run by a human, but whose output
 is noise in a CI pipeline where the import is logged elsewhere. The
 handler's side effects still run; drift detection and the return-type
-check still fire. Mutually exclusive with ``--report``: asking for
-specific reports and simultaneously suppressing all of them is
-incoherent, so the combination fails at parse.
+check still fire. Mutually exclusive with ``--report`` and
+``--all-reports``: the three selection flags are three different ways
+to override the default selection policy, so combining them is
+incoherent.
 
 .. code-block:: bash
 
    mytool import data.yaml --no-reports            # run the import, stay silent
+
+
+``--all-reports``
+-----------------
+
+Renders every report the handler returns, regardless of the command's
+``default_reports`` setting. The mirror image of ``--no-reports``:
+where ``--no-reports`` suppresses output from a command whose default
+is to show reports, ``--all-reports`` opts into the full set on a
+command whose default is to show nothing (``default_reports=None``) or
+to show only a subset (``default_reports=["X"]``). On commands that
+already default to showing every report, the flag is a harmless no-op.
+Mutually exclusive with ``--report`` and ``--no-reports``.
+
+.. code-block:: bash
+
+   mytool check                           # uses the command's default
+   mytool check --all-reports             # this time, show me everything
 
 
 ``--header`` / ``--no-header``

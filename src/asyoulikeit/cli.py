@@ -276,8 +276,13 @@ def report_output(
       to ``monthly_sales``).
     - ``--no-reports`` — suppress all report rendering while still
       running the handler (useful for action commands whose reports
-      are incidental confirmation). Mutually exclusive with
-      ``--report``.
+      are incidental confirmation).
+    - ``--all-reports`` — render every report the handler returns,
+      regardless of ``default_reports`` (useful for opting into the
+      full picture on a command that's normally silent or narrow).
+
+    The three selection flags (``--report``, ``--no-reports``,
+    ``--all-reports``) are mutually exclusive — pick at most one.
 
     Header behaviour is format-specific: TSV prefixes the first header
     cell with ``#``, display omits title/caption when headers are off,
@@ -396,8 +401,20 @@ def report_output(
         default=False,
         help="Suppress all report output. The handler still runs (useful "
              "for action commands whose reports are incidental); only "
-             "rendering is skipped. Mutually exclusive with --report.",
+             "rendering is skipped. Mutually exclusive with --report and "
+             "--all-reports.",
     )(
+        REPORT_OUTPUT_GROUP.option(
+            "--all-reports",
+            "all_reports",
+            is_flag=True,
+            default=False,
+            help="Render every report the handler returns, regardless of "
+                 "the command's default_reports. Useful for commands whose "
+                 "default is a subset (or silent) but where you want the "
+                 "full picture this time. Mutually exclusive with --report "
+                 "and --no-reports.",
+        )(
         REPORT_OUTPUT_GROUP.option(
             "--report",
             multiple=True,
@@ -432,19 +449,25 @@ def report_output(
                 )
             )
         )
+        )
     )
 
     # Wrap to consume format parameters and handle output
     @functools.wraps(decorated)
-    def wrapper(*args, as_format, detail_level, header, report, no_reports, **kwargs):
-        # --no-reports and --report are incoherent together: the user
-        # has asked to both suppress output entirely and to filter to a
-        # specific subset of it. Fail at the boundary so the handler
-        # doesn't run with a contradictory request.
-        if no_reports and report:
+    def wrapper(
+        *args, as_format, detail_level, header, report, no_reports,
+        all_reports, **kwargs,
+    ):
+        # --report, --no-reports, and --all-reports are three different
+        # ways to override the command's default report-selection
+        # policy, and any combination of them is incoherent. Fail at
+        # the boundary so the handler doesn't run with a contradictory
+        # request.
+        selection_flags_set = sum([bool(report), bool(no_reports), bool(all_reports)])
+        if selection_flags_set > 1:
             raise click.UsageError(
-                "--no-reports and --report are mutually exclusive: cannot "
-                "request specific reports and simultaneously suppress all of them."
+                "--report, --no-reports, and --all-reports are mutually "
+                "exclusive: pick at most one."
             )
 
         # Call handler without format parameters. This runs even when
@@ -476,10 +499,17 @@ def report_output(
             if no_reports:
                 return
 
-            # Determine which reports to show using Container protocol
+            # Determine which reports to show. Precedence, highest first:
+            #   --report X (subset by name, any order)
+            #   --all-reports (override default to include everything)
+            #   default_reports (the per-command default set at decoration)
             if report:
-                # User explicitly requested specific reports via --report flag(s)
                 report_names_to_show = report
+            elif all_reports:
+                # Show every report the handler returned, regardless of
+                # the command's default_reports policy — the flag's
+                # whole purpose is to override it.
+                report_names_to_show = list(result.keys())
             else:
                 # Filter by containment check - works for all three cases:
                 # - ALL_REPORTS (universal container): all names pass

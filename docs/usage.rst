@@ -129,9 +129,10 @@ itself: TSV picks ``ESSENTIAL`` (pipe-friendly), JSON and display pick
 Multiple reports
 ----------------
 
-A single command can return more than one report. All reports are
-rendered by default; the user narrows with ``--report <name>``, or
-passes ``--report`` multiple times.
+A single command can return more than one report. The command's
+*default selection policy* — set by the ``default_reports=`` argument
+to :func:`~asyoulikeit.report_output` — decides what happens when the
+user doesn't pass ``--report``:
 
 .. code-block:: python
 
@@ -140,24 +141,100 @@ passes ``--report`` multiple times.
        roles=Report(data=roles_data),
    )
 
-Pass ``default_reports=None`` alongside ``reports=`` to make a command
-silent by default — useful for action commands. Pass an iterable like
-``default_reports=["users"]`` to show only a specific subset by default.
-Either way, the names must appear in the ``reports=`` declaration (or
-be admitted by the ``Ellipsis`` slot); a typo raises
+There are three shapes for ``default_reports``. Pick the one that
+fits the command's purpose:
+
+* **Show everything by default** — ``default_reports=ALL_REPORTS``
+  (also the default when the argument is omitted). Typical for
+  reporting commands where every report is useful information and the
+  user's opt-out is explicit. Users narrow the set with
+  ``--report <name>`` (repeatable), drop everything with
+  ``--no-reports``, or leave well enough alone to see it all.
+
+* **Show nothing by default** — ``default_reports=None``. Typical for
+  *action commands* whose reports are useful interactively but noisy
+  when the command is orchestrated. Users opt into specific reports
+  with ``--report <name>``, or grab the full set with
+  ``--all-reports``.
+
+* **Show a specific subset by default** — ``default_reports=["X", "Y"]``.
+  For commands with a natural "most commonly wanted" subset. Users
+  narrow further with ``--report``, suppress with ``--no-reports``, or
+  override to everything with ``--all-reports``.
+
+The names in ``default_reports`` must appear in the ``reports=``
+declaration (or be admitted by an ``Ellipsis`` slot); a typo raises
 :exc:`~asyoulikeit.ReportDeclarationError` at decoration time. Action
 commands that never return a :class:`~asyoulikeit.Reports` (always
 ``None``) declare ``reports={}``.
 
-Users who want to run a command purely for its side effects — say, an
-``import`` command whose confirmation report is useful interactively
-but noise in a CI pipeline — can pass ``--no-reports`` on the command
-line. The handler still runs; only the rendering is suppressed. Drift
-detection and the :class:`~asyoulikeit.Reports` return-type check both
-still fire, so a buggy return isn't hidden by the flag.
-``--no-reports`` and ``--report`` are mutually exclusive: asking for
-specific reports and simultaneously suppressing all of them is
-incoherent, so the combination fails at parse.
+.. _all-reports-by-default:
+
+All-reports-by-default: the reporting-command shape
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. code-block:: python
+
+   @click.command()
+   @report_output(reports={
+       "users":  "The system's users.",
+       "groups": "The system's groups.",
+   })
+   def status():
+       return Reports(
+           users=Report(data=...),
+           groups=Report(data=...),
+       )
+
+.. code-block:: console
+
+   $ mytool status                         # users + groups
+   $ mytool status --report users          # just users
+   $ mytool status --no-reports            # nothing (rare; mostly for uniformity)
+
+.. _no-reports-by-default:
+
+No-reports-by-default: the action-command shape
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. code-block:: python
+
+   @click.command()
+   @click.argument("path", type=click.Path(exists=True))
+   @report_output(
+       reports={
+           "summary":  "Totals of what was imported.",
+           "rejected": "Rows that couldn't be imported.",
+       },
+       default_reports=None,
+   )
+   def import_data(path):
+       do_the_import(path)                 # side effect
+       return Reports(
+           summary=Report(data=_summary_data()),
+           rejected=Report(data=_rejected_data()),
+       )
+
+.. code-block:: console
+
+   $ mytool import-data file.csv                            # silent — side effect only
+   $ mytool import-data file.csv --report summary           # just the totals
+   $ mytool import-data file.csv --all-reports              # everything
+
+The handler runs in all three cases — only the rendering differs.
+Drift detection and the :class:`~asyoulikeit.Reports` return-type
+check still fire whenever the handler returns something, so a buggy
+return isn't hidden by ``--no-reports``.
+
+CLI selection flags are mutually exclusive
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``--report``, ``--no-reports``, and ``--all-reports`` are three
+different ways to override the command's default selection policy.
+Any combination of them is incoherent (you can't ask for "only users"
+*and* "all of them" *and* "none of them"), so the decorator rejects
+the combination with a ``click.UsageError`` at the wrapper boundary,
+before the handler runs.
 
 
 .. _tree-content:
