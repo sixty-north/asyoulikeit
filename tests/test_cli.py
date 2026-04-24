@@ -699,6 +699,278 @@ class TestReportsDriftDetection:
         assert declaration == {"summary": "s"}
 
 
+class TestListReportsCommand:
+    """Sibling factory that enumerates declared reports across a CLI tree."""
+
+    def _make_cli(self):
+        from asyoulikeit import list_reports_command
+
+        @click.command()
+        @report_output(reports={
+            "summary": "Site-wide totals",
+            "courses": "Per-course breakdown",
+        })
+        def audit():
+            """Run the audit."""
+            return Reports(
+                summary=Report(data=TableContent().add_column("k", "K").add_row(k="x")),
+                courses=Report(data=TableContent().add_column("k", "K").add_row(k="y")),
+            )
+
+        @click.command()
+        @report_output(reports={Ellipsis: "One report per input"})
+        def validate():
+            """Validate inputs."""
+            return Reports(
+                anything=Report(data=TableContent().add_column("k", "K").add_row(k="z")),
+            )
+
+        @click.command()
+        @report_output
+        def legacy():
+            """Command without a declaration."""
+            return Reports(a=Report(data=TableContent().add_column("k", "K").add_row(k="z")))
+
+        @click.group()
+        def cli():
+            pass
+
+        cli.add_command(audit, name="audit")
+        cli.add_command(validate, name="validate")
+        cli.add_command(legacy, name="legacy")
+        cli.add_command(list_reports_command(), name="list-reports")
+        return cli
+
+    def test_factory_returns_click_command(self):
+        from asyoulikeit import list_reports_command
+        assert isinstance(list_reports_command(), click.Command)
+
+    def test_tsv_lists_each_command_and_its_reports(self):
+        cli = self._make_cli()
+        result = CliRunner().invoke(cli, ["list-reports", "--as", "tsv"])
+        assert result.exit_code == 0, result.output
+        output = result.output
+        assert "audit" in output
+        assert "summary" in output
+        assert "Site-wide totals" in output
+        assert "courses" in output
+        assert "Per-course breakdown" in output
+
+    def test_ellipsis_declaration_renders_as_dynamic_child(self):
+        cli = self._make_cli()
+        result = CliRunner().invoke(cli, ["list-reports", "--as", "tsv"])
+        assert result.exit_code == 0
+        assert "validate" in result.output
+        assert "<dynamic>" in result.output
+        assert "One report per input" in result.output
+
+    def test_declaration_less_command_marked_undeclared(self):
+        cli = self._make_cli()
+        result = CliRunner().invoke(cli, ["list-reports", "--as", "tsv"])
+        assert "legacy" in result.output
+        assert "<undeclared>" in result.output
+
+    def test_list_reports_excludes_itself_from_listing(self):
+        # The introspection command must not appear in its own output.
+        cli = self._make_cli()
+        result = CliRunner().invoke(cli, ["list-reports", "--as", "tsv"])
+        assert "list-reports" not in result.output
+
+    def test_filtering_positional_narrows_to_one_command(self):
+        cli = self._make_cli()
+        result = CliRunner().invoke(cli, ["list-reports", "audit", "--as", "tsv"])
+        assert "audit" in result.output
+        assert "summary" in result.output
+        # Other commands are filtered out.
+        assert "validate" not in result.output
+        assert "legacy" not in result.output
+
+    def test_unknown_command_in_filter_fails_cleanly(self):
+        cli = self._make_cli()
+        result = CliRunner().invoke(cli, ["list-reports", "no-such-command"])
+        assert result.exit_code != 0
+        assert "no-such-command" in result.output
+
+    def test_json_output_has_tree_metadata(self):
+        cli = self._make_cli()
+        result = CliRunner().invoke(cli, ["list-reports", "--as", "json"])
+        assert result.exit_code == 0
+        parsed = json.loads(result.output)
+        report = parsed["reports"]["reports"]
+        assert report["metadata"]["kind"] == "tree"
+        root_names = [root["values"]["name"] for root in report["roots"]]
+        assert "audit" in root_names
+        assert "validate" in root_names
+        assert "legacy" in root_names
+
+    def test_display_output_contains_each_declared_name(self):
+        cli = self._make_cli()
+        result = CliRunner().invoke(
+            cli, ["list-reports", "--as", "display"],
+            env={"COLUMNS": "80", "NO_COLOR": "1"},
+        )
+        assert result.exit_code == 0
+        for name in ("audit", "summary", "courses", "validate", "<dynamic>"):
+            assert name in result.output
+
+    def test_not_attached_to_group_is_type_error(self):
+        """CLI-author misconfiguration raises; it's not an end-user problem."""
+        from asyoulikeit import list_reports_command
+        cmd = list_reports_command()
+        # Invoke directly (not attached to a group) — the invoked command
+        # sees itself as root, which is a Command, not a Group.
+        result = CliRunner().invoke(cmd, [])
+        assert result.exit_code != 0
+        assert isinstance(result.exception, TypeError)
+
+
+class TestDescribeReportCommand:
+    """Sibling factory that prints one declared report's description."""
+
+    def _make_cli(self):
+        from asyoulikeit import describe_report_command
+
+        @click.command()
+        @report_output(reports={
+            "summary": "Site-wide totals",
+            Ellipsis: "One report per input file",
+        })
+        def audit():
+            return Reports(
+                summary=Report(data=TableContent().add_column("k", "K").add_row(k="x")),
+            )
+
+        @click.command()
+        @report_output
+        def legacy():
+            return Reports(a=Report(data=TableContent().add_column("k", "K").add_row(k="y")))
+
+        @click.group()
+        def cli():
+            pass
+
+        cli.add_command(audit, name="audit")
+        cli.add_command(legacy, name="legacy")
+        cli.add_command(describe_report_command(), name="describe-report")
+        return cli
+
+    def test_factory_returns_click_command(self):
+        from asyoulikeit import describe_report_command
+        assert isinstance(describe_report_command(), click.Command)
+
+    def test_tsv_emits_bare_declared_description(self):
+        cli = self._make_cli()
+        result = CliRunner().invoke(
+            cli, ["describe-report", "audit", "summary", "--as", "tsv"]
+        )
+        assert result.exit_code == 0
+        assert result.output.strip() == "Site-wide totals"
+
+    def test_json_output_is_scalar_with_qualified_title(self):
+        cli = self._make_cli()
+        result = CliRunner().invoke(
+            cli, ["describe-report", "audit", "summary", "--as", "json"]
+        )
+        assert result.exit_code == 0
+        parsed = json.loads(result.output)
+        report = parsed["reports"]["description"]
+        assert report["metadata"]["kind"] == "scalar"
+        assert report["metadata"]["title"] == "audit.summary"
+        assert report["value"] == "Site-wide totals"
+
+    def test_display_output_labels_with_qualified_name(self):
+        cli = self._make_cli()
+        result = CliRunner().invoke(
+            cli, ["describe-report", "audit", "summary", "--as", "display"],
+            env={"COLUMNS": "80", "NO_COLOR": "1"},
+        )
+        assert result.exit_code == 0
+        assert "audit.summary" in result.output
+        assert "Site-wide totals" in result.output
+
+    def test_dynamic_keyword_resolves_to_ellipsis_slot(self):
+        cli = self._make_cli()
+        result = CliRunner().invoke(
+            cli, ["describe-report", "audit", "<dynamic>", "--as", "tsv"]
+        )
+        assert result.exit_code == 0
+        assert result.output.strip() == "One report per input file"
+
+    def test_hyphen_in_report_name_normalises_to_underscore(self):
+        from asyoulikeit import describe_report_command
+
+        @click.command()
+        @report_output(reports={"monthly_sales": "Monthly"})
+        def cmd():
+            return Reports(
+                monthly_sales=Report(data=TableContent().add_column("k", "K").add_row(k="x")),
+            )
+
+        @click.group()
+        def cli(): pass
+        cli.add_command(cmd, name="cmd")
+        cli.add_command(describe_report_command(), name="describe-report")
+
+        result = CliRunner().invoke(
+            cli, ["describe-report", "cmd", "monthly-sales", "--as", "tsv"]
+        )
+        assert result.exit_code == 0
+        assert result.output.strip() == "Monthly"
+
+    def test_unknown_command_fails_cleanly(self):
+        cli = self._make_cli()
+        result = CliRunner().invoke(
+            cli, ["describe-report", "nope", "summary"]
+        )
+        assert result.exit_code != 0
+        assert "nope" in result.output
+
+    def test_unknown_report_name_fails_cleanly(self):
+        cli = self._make_cli()
+        result = CliRunner().invoke(
+            cli, ["describe-report", "audit", "nonexistent"]
+        )
+        assert result.exit_code != 0
+        assert "nonexistent" in result.output
+        assert "summary" in result.output  # the error lists declared names
+
+    def test_dynamic_on_static_only_command_fails_cleanly(self):
+        # A command with no Ellipsis slot shouldn't accept <dynamic>.
+        from asyoulikeit import describe_report_command
+
+        @click.command()
+        @report_output(reports={"only": "Only"})
+        def static_cmd():
+            return Reports(only=Report(data=TableContent().add_column("k", "K").add_row(k="x")))
+
+        @click.group()
+        def cli(): pass
+        cli.add_command(static_cmd, name="static")
+        cli.add_command(describe_report_command(), name="describe-report")
+
+        result = CliRunner().invoke(
+            cli, ["describe-report", "static", "<dynamic>"]
+        )
+        assert result.exit_code != 0
+        assert "dynamic" in result.output.lower() or "Ellipsis" in result.output
+
+    def test_command_without_declaration_fails_cleanly(self):
+        cli = self._make_cli()
+        result = CliRunner().invoke(
+            cli, ["describe-report", "legacy", "a"]
+        )
+        assert result.exit_code != 0
+        assert "legacy" in result.output
+        assert "declaration" in result.output.lower() or "declared" in result.output.lower()
+
+    def test_not_attached_to_group_is_type_error(self):
+        from asyoulikeit import describe_report_command
+        cmd = describe_report_command()
+        result = CliRunner().invoke(cmd, ["audit", "summary"])
+        assert result.exit_code != 0
+        assert isinstance(result.exception, TypeError)
+
+
 class TestListFormattersCommand:
     """Factory that returns a 'list registered formatters' Click command."""
 

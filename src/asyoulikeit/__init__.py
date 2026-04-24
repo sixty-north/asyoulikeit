@@ -5,7 +5,9 @@ __version__ = "0.6.0"
 from asyoulikeit.cli import (
     ALL_REPORTS,
     describe_formatter_command,
+    describe_report_command,
     list_formatters_command,
+    list_reports_command,
     report_output,
 )
 from asyoulikeit.content import ReportContent
@@ -63,8 +65,10 @@ __all__ = [
     "create_formatter",
     "describe_formatter",
     "describe_formatter_command",
+    "describe_report_command",
     "format_as",
     "formatter_names",
     "list_formatters_command",
+    "list_reports_command",
     "report_output",
 ]

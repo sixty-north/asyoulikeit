@@ -321,6 +321,131 @@ in the ``--as`` choices of every command decorated with
 ``@report_output``.
 
 
+Declaring reports
+-----------------
+
+A CLI built with ``@report_output`` accepts ``--report <name>`` but
+users have no way to discover which names are valid — ``--help`` shows
+the flag, not its domain. You can declare the set explicitly by passing
+a ``reports=`` mapping of ``name → description`` to ``@report_output``:
+
+.. code-block:: python
+
+   from asyoulikeit import report_output, Report, Reports, TableContent
+
+   @click.command()
+   @report_output(reports={
+       "summary":   "Site-wide totals",
+       "courses":   "Per-course breakdown",
+       "structure": "Module and section hierarchy",
+   })
+   def video_audit():
+       """Audit the video library."""
+       return Reports(
+           summary=Report(data=...),
+           courses=Report(data=...),
+           structure=Report(data=...),
+       )
+
+Declaring ``reports=`` opts the command into four behaviours:
+
+- **Decoration-time validation.** Non-identifier keys, non-string
+  descriptions, and ``default_reports`` entries that refer to an
+  undeclared name all raise :exc:`~asyoulikeit.ReportDeclarationError`
+  at import time, not at first invocation.
+- **Auto-documented** ``--help``. A ``Produces reports:`` block is
+  appended to the command's help text, listing each declared name with
+  its description.
+- **Parse-time validation on** ``--report``. When the declaration is
+  fully static, ``--report`` becomes a ``click.Choice`` — typos fail at
+  parse with Click's list of valid values.
+- **Runtime drift detection.** If the handler returns a
+  :class:`~asyoulikeit.Reports` whose keys don't match the declaration
+  (and no ``Ellipsis`` slot was declared, see below),
+  :exc:`~asyoulikeit.ReportDeclarationError` is raised — catching the
+  refactor-renamed-a-report-silently bug.
+
+Dynamic report names
+~~~~~~~~~~~~~~~~~~~~
+
+Some commands produce one report per input — a map-style command whose
+report names are known only at runtime. Use ``Ellipsis`` (``...``) as a
+key to declare "this command also produces dynamically-named reports":
+
+.. code-block:: python
+
+   @report_output(reports={
+       ...: "One report per input YAML file; name is the file stem.",
+   })
+   def validate(files):
+       return Reports({f.stem: Report(data=...) for f in files})
+
+Mixed declarations work too — a fixed set of known names *plus* a
+dynamic tail:
+
+.. code-block:: python
+
+   @report_output(reports={
+       "overall": "Global summary across all files",
+       Ellipsis:  "One report per validated file; name is the file stem.",
+   })
+   def validate_all(files):
+       ...
+
+Dynamic commands skip the ``click.Choice`` step on ``--report`` (the
+valid set isn't knowable at decoration time), but the rest of the
+benefits — validation, help, drift detection on the static subset —
+still apply.
+
+Hyphens on the command line
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Python identifiers can't contain hyphens, but CLI convention strongly
+prefers them. ``asyoulikeit`` normalises ``--report`` values
+automatically: ``--report monthly-sales`` resolves to the declared
+``monthly_sales`` report. The normalisation applies whether or not
+``reports=`` is declared.
+
+Discovering reports: ``list-reports`` and ``describe-report``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Mirroring :ref:`formatter introspection <formatter-introspection>`,
+asyoulikeit ships two ready-made command factories that the host CLI
+drops into its group:
+
+.. code-block:: python
+
+   import click
+   from asyoulikeit import (
+       list_reports_command, describe_report_command,
+   )
+
+   @click.group()
+   def cli(): ...
+
+   cli.add_command(list_reports_command(),     name="list-reports")
+   cli.add_command(describe_report_command(),  name="describe-report")
+
+Both commands walk ``click.get_current_context().find_root()`` at
+invoke time, so they find every command the host has registered
+without per-command wiring. They are themselves ``@report_output``
+commands, so they inherit ``--as / --report / --header / --detailed``
+and render in any format:
+
+.. code-block:: console
+
+   $ mytool list-reports                       # full listing
+   $ mytool list-reports video-audit           # one command
+   $ mytool describe-report video-audit courses
+   $ mytool describe-report video-audit '<dynamic>'   # describe the Ellipsis slot
+
+Commands that don't declare ``reports=`` surface in ``list-reports``
+with a single ``<undeclared>`` child, so authors can see which of
+their commands haven't opted in yet.
+
+
+.. _formatter-introspection:
+
 Formatter introspection
 -----------------------
 

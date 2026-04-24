@@ -20,6 +20,7 @@ from asyoulikeit.exceptions import ReportDeclarationError
 from asyoulikeit.formatter import describe_formatter, formatter_names, format_as
 from asyoulikeit.scalar_data import ScalarContent
 from asyoulikeit.tabular_data import DetailLevel, Report, Reports, TableContent
+from asyoulikeit.tree_data import TreeContent
 
 
 # Environment variable consulted when ``--as`` is not given on the
@@ -244,28 +245,21 @@ def report_output(
             identifiers; use ``Ellipsis`` as a key to declare "this command
             also produces dynamic reports whose names are known only at
             runtime" (e.g. one report per input file). Declaring ``reports=``
-            opts a command into:
-
-            - Decoration-time validation (typos in declared names fail fast).
-            - A ``Produces reports:`` block appended to ``--help``.
-            - ``click.Choice`` on ``--report`` when the declaration is fully
-              static (no ``Ellipsis``), so typos fail at parse with a list of
-              valid values.
-            - Runtime drift detection: a returned :class:`Reports` containing
-              a name that isn't declared (and isn't admitted by an
-              ``Ellipsis`` slot) raises :exc:`ReportDeclarationError`.
-
-            Omitting ``reports=`` preserves today's free-form behaviour —
-            unknown ``--report`` values warn to stderr and exit silently.
+            opts a command into decoration-time validation (typos in declared
+            names fail fast), a ``Produces reports:`` block appended to
+            ``--help``, ``click.Choice`` validation on ``--report`` when the
+            declaration is fully static, and runtime drift detection — a
+            returned :class:`Reports` containing an undeclared name (without
+            an ``Ellipsis`` slot admitting it) raises
+            :exc:`ReportDeclarationError`. Omitting ``reports=`` preserves
+            today's free-form behaviour: unknown ``--report`` values warn to
+            stderr and exit silently.
 
     Adds these CLI options:
     - --as: Selects the output format (display, tsv, json)
     - --detailed/--essential: Controls which columns are included (overrides report defaults)
     - --header/--no-header: Controls whether headers are emitted (overrides report defaults)
-    - --report: Filters which reports to display (can be specified multiple times).
-      Hyphens in values are normalised to underscores (``--report monthly-sales``
-      resolves to the ``monthly_sales`` report) regardless of whether
-      ``reports=`` is declared.
+    - --report: Filters which reports to display (can be specified multiple times). Hyphens are normalised to underscores (``--report monthly-sales`` resolves to ``monthly_sales``) regardless of whether ``reports=`` is declared.
 
     The --as option defaults intelligently based on TTY detection.
     The detail level defaults to AUTO, allowing each formatter to decide its default behavior.
@@ -273,14 +267,17 @@ def report_output(
     display omits headers/title/caption, JSON ignores the flag.
 
     Examples:
-        @report_output  # Show all reports (reporting command)
-        @report_output(default_reports=ALL_REPORTS)  # Explicit, same as above
-        @report_output(default_reports=None)  # Silent by default (action command)
-        @report_output(default_reports=["outputs"])  # Show only outputs by default
-        @report_output(reports={"summary": "Site-wide totals",
-                                "courses": "Per-course breakdown"})
-        @report_output(reports={..., "overall": "Global summary",
-                                Ellipsis: "One report per input file"})
+        ``@report_output`` — show all reports (reporting command).
+
+        ``@report_output(default_reports=ALL_REPORTS)`` — same, explicit.
+
+        ``@report_output(default_reports=None)`` — silent by default (action command).
+
+        ``@report_output(default_reports=["outputs"])`` — show only ``outputs`` by default.
+
+        ``@report_output(reports={"summary": "…", "courses": "…"})`` — declare a static set.
+
+        ``@report_output(reports={"overall": "…", Ellipsis: "…"})`` — mixed static + dynamic.
     """
     # Decorator factory pattern: if called with parentheses, func is None
     if func is None:
@@ -585,3 +582,210 @@ def describe_formatter_command() -> click.Command:
             title=name,
         )))
     return describe
+
+
+# -- report introspection (issue #7) ------------------------------------------
+
+def _walk_commands(group: click.Group, prefix: tuple = ()) -> Iterable[tuple]:
+    """Yield ``(path_tuple, name, click.Command)`` for every leaf command under ``group``.
+
+    Walks nested :class:`click.Group` instances recursively. Skips the
+    introspection commands themselves (``list-reports`` /
+    ``describe-report``) so they don't appear in their own listings —
+    self-description is noise, not signal.
+    """
+    for name, cmd in group.commands.items():
+        if isinstance(cmd, click.Group):
+            yield from _walk_commands(cmd, prefix + (name,))
+            continue
+        if getattr(cmd.callback, "_asyoulikeit_introspection", False):
+            continue
+        yield prefix + (name,), name, cmd
+
+
+def _declared_reports(cmd: click.Command) -> Optional[Mapping]:
+    """Return the ``reports=`` declaration on ``cmd``, or ``None`` if none.
+
+    Commands decorated with :func:`report_output` carry their declaration
+    (if any) on the wrapper via ``_asyoulikeit_reports``. A command that
+    wasn't decorated at all, or was decorated without ``reports=``,
+    yields ``None`` — treated as "no declared reports" by the
+    introspection commands.
+    """
+    callback = getattr(cmd, "callback", None)
+    return getattr(callback, "_asyoulikeit_reports", None)
+
+
+def list_reports_command() -> click.Command:
+    """Return a Click command that lists declared reports across the CLI.
+
+    Mirrors :func:`list_formatters_command`: the returned command is
+    itself decorated with ``@report_output``, so it inherits
+    ``--as / --report / --header / --detailed`` and renders in any
+    format. The payload is a :class:`~asyoulikeit.TreeContent` with one
+    root node per ``@report_output`` command discovered under the root
+    Click group and children for each declared report (name +
+    description). Commands without a ``reports=`` declaration surface
+    with a single ``<undeclared>`` child so users know which commands
+    haven't opted in.
+
+    The host CLI adds it under whatever name suits it::
+
+        cli.add_command(list_reports_command(), name="list-reports")
+
+    Usage::
+
+        mytool list-reports                # every command + its reports
+        mytool list-reports video-audit    # one command only
+
+    The command walks ``click.get_current_context().find_root()`` at
+    invoke time, so it sees every command the host has added before
+    invocation — no per-command wiring required.
+    """
+    @click.command()
+    @click.argument("command", required=False)
+    @report_output(reports={
+        "reports": "Hierarchical listing of CLI commands and their declared reports.",
+    })
+    def list_reports(command: Optional[str]) -> Reports:
+        """List every ``@report_output`` command in this CLI with its declared reports."""
+        root = click.get_current_context().find_root().command
+        if not isinstance(root, click.Group):
+            # This is a wiring mistake by the CLI author, not something
+            # an end user can fix — raise a real exception so the
+            # traceback surfaces during development, instead of Click's
+            # polite UsageError banner.
+            raise TypeError(
+                "list_reports_command() must be attached to a click.Group; "
+                f"got {type(root).__name__}. Use cli.add_command(list_reports_command(), "
+                "name='list-reports') where cli is a @click.group()."
+            )
+
+        tree = (
+            TreeContent(
+                title="Reports",
+                description="Commands and the reports they produce.",
+            )
+            .add_column("name", "Name", header=True)
+            .add_column("description", "Description")
+        )
+
+        for path, _leaf_name, cmd in _walk_commands(root):
+            display_name = " ".join(path)
+            if command is not None and display_name != command:
+                continue
+            short_help = (cmd.get_short_help_str() or "").strip() or "(no description)"
+            root_node = tree.add_root(name=display_name, description=short_help)
+            declaration = _declared_reports(cmd)
+            if declaration is None:
+                root_node.add_child(name="<undeclared>", description="(reports= not declared)")
+                continue
+            static_names = sorted(
+                k for k in declaration.keys() if isinstance(k, str)
+            )
+            for rep_name in static_names:
+                root_node.add_child(name=rep_name, description=declaration[rep_name])
+            if Ellipsis in declaration.keys():
+                root_node.add_child(name="<dynamic>", description=declaration[Ellipsis])
+
+        if command is not None and not list(tree.roots):
+            raise click.UsageError(
+                f"No command named {command!r} in this CLI."
+            )
+
+        return Reports(reports=Report(data=tree))
+
+    # Mark the callback (not the Command) so _walk_commands can skip
+    # this command when it's listing reports — we check the attribute
+    # at cmd.callback to stay consistent with how _declared_reports
+    # reads _asyoulikeit_reports from the callback.
+    list_reports.callback._asyoulikeit_introspection = True
+    return list_reports
+
+
+def describe_report_command() -> click.Command:
+    """Return a Click command that prints one declared report's description.
+
+    Takes two positionals — ``<command>`` and ``<report>`` — and surfaces
+    the description the command declared for that report via
+    ``reports={...}``. Payload is a :class:`~asyoulikeit.ScalarContent`
+    whose ``title`` is ``command.report`` and whose ``value`` is the
+    declared description, so ``--as tsv`` yields the bare text (pipe-
+    friendly), ``--as json`` gives ``metadata.title`` + ``value``, and
+    ``--as display`` yields ``command.report: <description>``.
+
+    An ``<dynamic>`` report name works: it surfaces the description
+    attached to the ``Ellipsis`` slot of the command's declaration.
+
+    The host CLI adds it under whatever name it prefers::
+
+        cli.add_command(describe_report_command(), name="describe-report")
+    """
+    # ``report`` as a positional-argument name would collide with the
+    # ``--report`` option that ``@report_output`` adds: Click raises
+    # "Value must be an iterable" when the option parser finds two
+    # sinks claiming the name. ``report_name`` keeps them distinct.
+    @click.command()
+    @click.argument("command")
+    @click.argument("report_name", metavar="REPORT")
+    @report_output(reports={
+        "description": "The declared description of one report.",
+    })
+    def describe_report(command: str, report_name: str) -> Reports:
+        """Describe a specific declared report."""
+        root = click.get_current_context().find_root().command
+        if not isinstance(root, click.Group):
+            # Wiring mistake by the CLI author — see list_reports_command().
+            raise TypeError(
+                "describe_report_command() must be attached to a click.Group; "
+                f"got {type(root).__name__}. Use cli.add_command(describe_report_command(), "
+                "name='describe-report') where cli is a @click.group()."
+            )
+
+        # Find the target command by its displayed path.
+        target = None
+        for path, _leaf_name, cmd in _walk_commands(root):
+            if " ".join(path) == command:
+                target = cmd
+                break
+        if target is None:
+            raise click.UsageError(f"No command named {command!r} in this CLI.")
+
+        declaration = _declared_reports(target)
+        if declaration is None:
+            raise click.UsageError(
+                f"Command {command!r} has no reports= declaration."
+            )
+
+        # Normalise the user-supplied report name: hyphens → underscores,
+        # and the literal "<dynamic>" resolves to the Ellipsis slot.
+        lookup_name = report_name.replace("-", "_")
+        if lookup_name == "_dynamic_" or report_name == "<dynamic>":
+            if Ellipsis not in declaration.keys():
+                raise click.UsageError(
+                    f"Command {command!r} has no dynamic (Ellipsis) report slot."
+                )
+            description = declaration[Ellipsis]
+            title = f"{command}.<dynamic>"
+        else:
+            if lookup_name not in declaration.keys():
+                declared = ", ".join(
+                    repr(k) for k in sorted(
+                        k for k in declaration.keys() if isinstance(k, str)
+                    )
+                ) or "(none static)"
+                raise click.UsageError(
+                    f"Command {command!r} does not declare a report named "
+                    f"{report_name!r}. Declared: {declared}"
+                    f"{'; <dynamic>' if Ellipsis in declaration.keys() else ''}."
+                )
+            description = declaration[lookup_name]
+            title = f"{command}.{lookup_name}"
+
+        return Reports(description=Report(data=ScalarContent(
+            value=description,
+            title=title,
+        )))
+
+    describe_report.callback._asyoulikeit_introspection = True
+    return describe_report
