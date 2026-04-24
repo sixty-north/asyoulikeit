@@ -9,7 +9,7 @@ from asyoulikeit.cli import (
     report_output,
 )
 from asyoulikeit.content import ReportContent
-from asyoulikeit.exceptions import AsyoulikeitError
+from asyoulikeit.exceptions import AsyoulikeitError, ReportDeclarationError
 from asyoulikeit.extension import Extension, ExtensionError
 from asyoulikeit.formatter import (
     Formatter,
@@ -49,6 +49,7 @@ __all__ = [
     "Node",
     "Report",
     "ReportContent",
+    "ReportDeclarationError",
     "Reports",
     "STYLE_ALIGNMENT",
     "STYLE_BACKGROUND_COLOR",

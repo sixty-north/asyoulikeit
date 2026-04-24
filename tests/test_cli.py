@@ -449,6 +449,256 @@ class TestReportOverrides:
         assert "hello" in result.output
 
 
+class TestReportsDeclarationValidation:
+    """Decoration-time validation of the reports= declaration."""
+
+    def test_non_identifier_key_rejected(self):
+        from asyoulikeit import ReportDeclarationError
+        with pytest.raises(ReportDeclarationError) as excinfo:
+            @report_output(reports={"bad-name": "no"})
+            def cmd(): ...
+        assert "bad-name" in str(excinfo.value)
+        assert "identifier" in str(excinfo.value)
+
+    def test_starting_digit_rejected(self):
+        from asyoulikeit import ReportDeclarationError
+        with pytest.raises(ReportDeclarationError):
+            @report_output(reports={"1st": "no"})
+            def cmd(): ...
+
+    def test_non_string_non_ellipsis_key_rejected(self):
+        from asyoulikeit import ReportDeclarationError
+        with pytest.raises(ReportDeclarationError) as excinfo:
+            @report_output(reports={42: "no"})
+            def cmd(): ...
+        assert "int" in str(excinfo.value) or "42" in str(excinfo.value)
+
+    def test_non_string_description_rejected(self):
+        from asyoulikeit import ReportDeclarationError
+        with pytest.raises(ReportDeclarationError):
+            @report_output(reports={"summary": 42})
+            def cmd(): ...
+
+    def test_non_mapping_rejected(self):
+        from asyoulikeit import ReportDeclarationError
+        with pytest.raises(ReportDeclarationError):
+            @report_output(reports=["summary", "courses"])
+            def cmd(): ...
+
+    def test_ellipsis_key_accepted(self):
+        # Should not raise.
+        @report_output(reports={Ellipsis: "Dynamic names"})
+        def cmd(): ...
+
+    def test_mixed_static_and_ellipsis_accepted(self):
+        @report_output(reports={"overall": "Fixed", Ellipsis: "Dynamic"})
+        def cmd(): ...
+
+    def test_default_reports_must_be_in_declaration(self):
+        from asyoulikeit import ReportDeclarationError
+        with pytest.raises(ReportDeclarationError) as excinfo:
+            @report_output(
+                reports={"summary": "Totals", "courses": "Courses"},
+                default_reports=["summaryy"],  # typo
+            )
+            def cmd(): ...
+        assert "summaryy" in str(excinfo.value)
+
+    def test_default_reports_subset_of_declaration_accepted(self):
+        @report_output(
+            reports={"summary": "Totals", "courses": "Courses"},
+            default_reports=["summary"],
+        )
+        def cmd(): ...
+
+
+class TestReportsDeclarationHelp:
+    """The "Produces reports:" block appended to --help."""
+
+    def test_static_declaration_appears_in_help(self):
+        @click.command()
+        @report_output(reports={
+            "summary": "Site-wide totals",
+            "courses": "Per-course breakdown",
+        })
+        def cmd():
+            """Run the thing."""
+
+        result = CliRunner().invoke(cmd, ["--help"])
+        # Click's formatter preserves our \b-marked block, so the header
+        # and each row appear on their own lines.
+        assert "Produces reports:" in result.output
+        assert "summary" in result.output
+        assert "Site-wide totals" in result.output
+        assert "courses" in result.output
+        assert "Per-course breakdown" in result.output
+
+    def test_ellipsis_slot_renders_as_dynamic(self):
+        @click.command()
+        @report_output(reports={"fixed": "Fixed part", Ellipsis: "Per-input dynamic"})
+        def cmd(): ...
+
+        result = CliRunner().invoke(cmd, ["--help"])
+        assert "<dynamic>" in result.output
+        assert "Per-input dynamic" in result.output
+
+    def test_declaration_less_command_has_no_produces_block(self):
+        @click.command()
+        @report_output
+        def cmd():
+            """A plain command."""
+
+        result = CliRunner().invoke(cmd, ["--help"])
+        assert "Produces reports:" not in result.output
+
+
+class TestReportChoiceValidation:
+    """--report option type is click.Choice when the declaration is fully static."""
+
+    def _static_cmd(self):
+        @click.command()
+        @report_output(reports={"summary": "s", "courses": "c"})
+        def cmd():
+            return Reports(
+                summary=Report(data=TableContent().add_column("k", "k").add_row(k="x")),
+                courses=Report(data=TableContent().add_column("k", "k").add_row(k="y")),
+            )
+        return cmd
+
+    def _dynamic_cmd(self):
+        @click.command()
+        @report_output(reports={"fixed": "f", Ellipsis: "dyn"})
+        def cmd():
+            return Reports(
+                fixed=Report(data=TableContent().add_column("k", "k").add_row(k="x")),
+                one=Report(data=TableContent().add_column("k", "k").add_row(k="y")),
+            )
+        return cmd
+
+    def test_static_declaration_rejects_unknown_name_at_parse(self):
+        cmd = self._static_cmd()
+        result = CliRunner().invoke(cmd, ["--report", "nope"])
+        assert result.exit_code != 0
+        assert "nope" in result.output
+        assert "summary" in result.output  # shown as valid
+        assert "courses" in result.output
+
+    def test_static_declaration_accepts_declared_name(self):
+        cmd = self._static_cmd()
+        result = CliRunner().invoke(cmd, ["--report", "summary", "--as", "tsv"])
+        assert result.exit_code == 0
+
+    def test_dynamic_declaration_does_not_use_click_choice(self):
+        cmd = self._dynamic_cmd()
+        # Dynamic commands allow any name through — the handler gets to decide.
+        result = CliRunner().invoke(cmd, ["--report", "any_name", "--as", "tsv"])
+        # Unknown name at runtime → current behaviour: warn to stderr, exit 0.
+        assert result.exit_code == 0
+
+    def test_declaration_less_command_keeps_free_form_behaviour(self):
+        @click.command()
+        @report_output
+        def cmd():
+            return Reports(a=Report(data=TableContent().add_column("k", "k").add_row(k="x")))
+
+        result = CliRunner().invoke(cmd, ["--report", "b"])
+        # Legacy: unknown --report warns, exits 0.
+        assert result.exit_code == 0
+
+
+class TestReportHyphenNormalisation:
+    """--report monthly-sales must resolve to the declared monthly_sales."""
+
+    def test_static_declaration_accepts_hyphen_form(self):
+        @click.command()
+        @report_output(reports={"monthly_sales": "Monthly"})
+        def cmd():
+            return Reports(
+                monthly_sales=Report(data=TableContent().add_column("k", "k").add_row(k="x")),
+            )
+
+        result = CliRunner().invoke(cmd, ["--report", "monthly-sales", "--as", "tsv"])
+        assert result.exit_code == 0
+        assert "x" in result.output
+
+    def test_declaration_less_command_also_normalises(self):
+        @click.command()
+        @report_output
+        def cmd():
+            return Reports(
+                monthly_sales=Report(data=TableContent().add_column("k", "k").add_row(k="x")),
+            )
+
+        result = CliRunner().invoke(cmd, ["--report", "monthly-sales", "--as", "tsv"])
+        assert result.exit_code == 0
+        assert "x" in result.output
+
+
+class TestReportsDriftDetection:
+    """Handlers returning names outside the declaration fail loudly."""
+
+    def test_undeclared_report_raises_with_static_declaration(self):
+        from asyoulikeit import ReportDeclarationError
+
+        @click.command()
+        @report_output(reports={"summary": "s"})
+        def cmd():
+            return Reports(
+                summary=Report(data=TableContent().add_column("k", "k").add_row(k="x")),
+                extra=Report(data=TableContent().add_column("k", "k").add_row(k="y")),
+            )
+
+        result = CliRunner().invoke(cmd, ["--as", "tsv"])
+        assert result.exit_code != 0
+        assert isinstance(result.exception, ReportDeclarationError)
+        assert "extra" in str(result.exception)
+
+    def test_declared_report_returned_does_not_raise(self):
+        @click.command()
+        @report_output(reports={"summary": "s"})
+        def cmd():
+            return Reports(
+                summary=Report(data=TableContent().add_column("k", "k").add_row(k="x")),
+            )
+
+        result = CliRunner().invoke(cmd, ["--as", "tsv"])
+        assert result.exit_code == 0
+
+    def test_ellipsis_slot_admits_any_name(self):
+        @click.command()
+        @report_output(reports={"fixed": "f", Ellipsis: "dyn"})
+        def cmd():
+            return Reports(
+                fixed=Report(data=TableContent().add_column("k", "k").add_row(k="x")),
+                whatever=Report(data=TableContent().add_column("k", "k").add_row(k="y")),
+            )
+
+        result = CliRunner().invoke(cmd, ["--as", "tsv"])
+        assert result.exit_code == 0
+
+    def test_declaration_less_command_does_not_drift_check(self):
+        # Back-compat: no declaration → no drift detection, silent warn on --report.
+        @click.command()
+        @report_output
+        def cmd():
+            return Reports(
+                anything=Report(data=TableContent().add_column("k", "k").add_row(k="x")),
+                at_all=Report(data=TableContent().add_column("k", "k").add_row(k="y")),
+            )
+
+        result = CliRunner().invoke(cmd, ["--as", "tsv"])
+        assert result.exit_code == 0
+
+    def test_declaration_metadata_attached_to_wrapper(self):
+        # The introspection factories (see #7 Commit B) read this attr.
+        @report_output(reports={"summary": "s"})
+        def cmd():
+            return Reports()
+
+        declaration = cmd._asyoulikeit_reports
+        assert declaration == {"summary": "s"}
+
+
 class TestListFormattersCommand:
     """Factory that returns a 'list registered formatters' Click command."""
 

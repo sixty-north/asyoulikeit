@@ -8,13 +8,15 @@ formatted report output with support for multiple reports, format selection
 import functools
 import os
 import sys
-from collections.abc import Container
+from collections.abc import Container, Mapping
 from dataclasses import replace
-from typing import Callable, Iterable
+from types import EllipsisType
+from typing import Callable, Iterable, Optional, Union
 
 import click
 from click_option_group import OptionGroup
 
+from asyoulikeit.exceptions import ReportDeclarationError
 from asyoulikeit.formatter import describe_formatter, formatter_names, format_as
 from asyoulikeit.scalar_data import ScalarContent
 from asyoulikeit.tabular_data import DetailLevel, Report, Reports, TableContent
@@ -60,11 +62,169 @@ def _warn(message: str) -> None:
     click.secho(message, fg="magenta", err=True)
 
 
+def _validate_reports_declaration(
+    reports: Mapping[Union[str, EllipsisType], str],
+) -> None:
+    """Validate the shape of a ``reports=`` mapping at decoration time.
+
+    Each key must be either a valid Python identifier (same contract
+    :class:`~asyoulikeit.Reports` enforces on construction) or
+    ``Ellipsis`` (the "dynamic slot" sentinel). Anything else — a
+    non-identifier string, an integer, a tuple — raises
+    :exc:`~asyoulikeit.ReportDeclarationError` so the problem surfaces
+    at import time, not on first invocation.
+    """
+    if not isinstance(reports, Mapping):
+        raise ReportDeclarationError(
+            f"reports= must be a mapping of name → description, not "
+            f"{type(reports).__name__}"
+        )
+    for key, description in reports.items():
+        if key is Ellipsis:
+            continue
+        if not isinstance(key, str):
+            raise ReportDeclarationError(
+                f"reports= keys must be strings or Ellipsis; got "
+                f"{type(key).__name__} ({key!r})"
+            )
+        if not key.isidentifier():
+            raise ReportDeclarationError(
+                f"reports= key {key!r} must be a valid Python identifier "
+                "(alphanumeric + underscore, not starting with digit). "
+                "Use hyphens on the CLI (--report my-report) and identifiers "
+                "here (reports={'my_report': ...}); asyoulikeit maps between "
+                "the two automatically."
+            )
+        if not isinstance(description, str):
+            raise ReportDeclarationError(
+                f"reports={{{key!r}: ...}} description must be a string, "
+                f"not {type(description).__name__}"
+            )
+
+
+def _validate_default_reports_against_declaration(
+    default_reports, declared_static: frozenset[str]
+) -> None:
+    """Cross-check ``default_reports`` against the ``reports=`` declaration.
+
+    Only runs when both are given explicitly and ``default_reports`` is
+    an iterable of names (not ``ALL_REPORTS`` / ``None``). Catches the
+    silent-typo case where ``default_reports=["summaryy"]`` would
+    previously have produced an empty default set at runtime with no
+    diagnostic.
+    """
+    if default_reports is ALL_REPORTS or default_reports is None:
+        return
+    missing = [
+        name for name in default_reports if name not in declared_static
+    ]
+    if missing:
+        raise ReportDeclarationError(
+            f"default_reports entries not in the reports= declaration: "
+            f"{', '.join(repr(n) for n in missing)}. Declared: "
+            f"{', '.join(repr(n) for n in sorted(declared_static)) or '(none static)'}."
+        )
+
+
+def _normalise_report_arg(_ctx, _param, value):
+    """Rewrite hyphens to underscores on ``--report`` values.
+
+    CLI convention prefers ``--report monthly-sales``; Python identifiers
+    forbid hyphens, so :class:`~asyoulikeit.Reports` keys come out as
+    ``monthly_sales``. This callback normalises at the flag boundary so
+    users get the CLI convention they expect and handlers keep clean
+    identifiers. Applies unconditionally — even without a ``reports=``
+    declaration — because a user typing a hyphenated name is always
+    trying to reach the equivalent identifier.
+    """
+    if value is None:
+        return value
+    # ``multiple=True`` gives us a tuple; the option also accepts None.
+    return tuple(v.replace("-", "_") for v in value)
+
+
+def _build_reports_epilog(
+    reports: Mapping[Union[str, EllipsisType], str],
+) -> str:
+    """Render the ``reports=`` declaration as a "Produces reports:" epilog.
+
+    Static names first (sorted), then ``<dynamic>`` at the end if the
+    declaration includes an ``Ellipsis`` slot. Column-aligned for
+    readability in ``--help`` output.
+
+    The leading ``\\b`` is Click's no-rewrap marker: without it, Click's
+    help formatter collapses the multi-line table into a single flowed
+    paragraph. Every rendered line in the block needs the marker at the
+    start of its paragraph; a single block at the top suffices because
+    we only emit one newline between entries (Click treats consecutive
+    \\n-separated lines within the same paragraph as the one to preserve).
+    """
+    static_names = sorted(k for k in reports.keys() if isinstance(k, str))
+    has_dynamic = Ellipsis in reports.keys()
+    labels = static_names + (["<dynamic>"] if has_dynamic else [])
+    name_width = max(len(label) for label in labels) if labels else 0
+    # The "\b" tells Click not to rewrap the block when rendering --help.
+    lines = ["\b", "Produces reports:"]
+    for name in static_names:
+        lines.append(f"  {name.ljust(name_width)}  {reports[name]}")
+    if has_dynamic:
+        lines.append(f"  {'<dynamic>'.ljust(name_width)}  {reports[Ellipsis]}")
+    return "\n".join(lines)
+
+
+class _ReportChoice(click.Choice):
+    """``click.Choice`` variant that accepts hyphen-for-underscore aliases.
+
+    Lets users type ``--report monthly-sales`` even when the declared
+    name is ``monthly_sales``. Without this, ``click.Choice`` rejects
+    the hyphenated form at parse time (before any callback runs).
+    Normalising inside :meth:`convert` means the Choice matches either
+    form and always returns the canonical identifier.
+    """
+
+    def convert(self, value, param, ctx):
+        return super().convert(value.replace("-", "_"), param, ctx)
+
+
+def _check_drift(
+    reports_returned: Reports,
+    declaration: Mapping[Union[str, EllipsisType], str],
+    command_name: str,
+) -> None:
+    """Hard-fail if the handler returned a name not in the declaration.
+
+    When a ``reports=`` declaration is present, every returned key must
+    either match a declared static name or be admitted by the
+    ``Ellipsis`` slot. Undeclared names raise — the refactor-renamed-
+    a-report-and-nobody-noticed failure mode was the motivating bug
+    behind the declaration feature.
+    """
+    declared_static = {k for k in declaration.keys() if isinstance(k, str)}
+    accepts_dynamic = Ellipsis in declaration.keys()
+    undeclared = [
+        name for name in reports_returned.keys()
+        if name not in declared_static
+    ]
+    if not undeclared:
+        return
+    if accepts_dynamic:
+        return
+    raise ReportDeclarationError(
+        f"Command {command_name!r} returned undeclared "
+        f"report{'s' if len(undeclared) > 1 else ''}: "
+        f"{', '.join(repr(n) for n in undeclared)}. "
+        f"Declared: {', '.join(repr(n) for n in sorted(declared_static)) or '(none static)'}. "
+        "Add the name(s) to reports={...} or declare reports={..., Ellipsis: \"…\"} "
+        "to accept dynamic names."
+    )
+
+
 def report_output(
     func: Callable = None,
     /,
     *,
-    default_reports: None | Iterable[str] | _UniversalContainer = ALL_REPORTS
+    default_reports: Union[None, Iterable[str], _UniversalContainer] = ALL_REPORTS,
+    reports: Optional[Mapping[Union[str, EllipsisType], str]] = None,
 ) -> Callable:
     """Decorator factory for commands that return tabular output.
 
@@ -79,12 +239,33 @@ def report_output(
             - ALL_REPORTS: Show all reports (default, for reporting commands)
             - None: Show no reports (silent by default, for action commands)
             - Iterable[str]: Show only these named reports by default
+        reports: Optional mapping of ``{name: description}`` declaring the
+            report names this command produces. Keys must be valid Python
+            identifiers; use ``Ellipsis`` as a key to declare "this command
+            also produces dynamic reports whose names are known only at
+            runtime" (e.g. one report per input file). Declaring ``reports=``
+            opts a command into:
+
+            - Decoration-time validation (typos in declared names fail fast).
+            - A ``Produces reports:`` block appended to ``--help``.
+            - ``click.Choice`` on ``--report`` when the declaration is fully
+              static (no ``Ellipsis``), so typos fail at parse with a list of
+              valid values.
+            - Runtime drift detection: a returned :class:`Reports` containing
+              a name that isn't declared (and isn't admitted by an
+              ``Ellipsis`` slot) raises :exc:`ReportDeclarationError`.
+
+            Omitting ``reports=`` preserves today's free-form behaviour —
+            unknown ``--report`` values warn to stderr and exit silently.
 
     Adds these CLI options:
     - --as: Selects the output format (display, tsv, json)
     - --detailed/--essential: Controls which columns are included (overrides report defaults)
     - --header/--no-header: Controls whether headers are emitted (overrides report defaults)
-    - --report: Filters which reports to display (can be specified multiple times)
+    - --report: Filters which reports to display (can be specified multiple times).
+      Hyphens in values are normalised to underscores (``--report monthly-sales``
+      resolves to the ``monthly_sales`` report) regardless of whether
+      ``reports=`` is declared.
 
     The --as option defaults intelligently based on TTY detection.
     The detail level defaults to AUTO, allowing each formatter to decide its default behavior.
@@ -96,10 +277,33 @@ def report_output(
         @report_output(default_reports=ALL_REPORTS)  # Explicit, same as above
         @report_output(default_reports=None)  # Silent by default (action command)
         @report_output(default_reports=["outputs"])  # Show only outputs by default
+        @report_output(reports={"summary": "Site-wide totals",
+                                "courses": "Per-course breakdown"})
+        @report_output(reports={..., "overall": "Global summary",
+                                Ellipsis: "One report per input file"})
     """
     # Decorator factory pattern: if called with parentheses, func is None
     if func is None:
-        return functools.partial(report_output, default_reports=default_reports)
+        return functools.partial(
+            report_output,
+            default_reports=default_reports,
+            reports=reports,
+        )
+
+    # Validate the reports= declaration shape first so typos in the
+    # decoration surface before default_reports is checked against it.
+    if reports is not None:
+        _validate_reports_declaration(reports)
+        declared_static = frozenset(
+            k for k in reports.keys() if isinstance(k, str)
+        )
+        _validate_default_reports_against_declaration(
+            default_reports, declared_static
+        )
+        accepts_dynamic_reports = Ellipsis in reports.keys()
+    else:
+        declared_static = frozenset()
+        accepts_dynamic_reports = True  # back-compat: no declaration = permissive
 
     # Normalize to Container at decoration time for efficient runtime checking
     if default_reports is ALL_REPORTS:
@@ -147,11 +351,31 @@ def report_output(
         else:
             return DetailLevel.ESSENTIAL
 
+    # Build the --report option type. When the declaration is fully
+    # static (no Ellipsis), use click.Choice so typos fail at parse
+    # with a clean error listing valid names. Otherwise fall back to
+    # plain strings so dynamic names still pass through.
+    if reports is not None and not accepts_dynamic_reports and declared_static:
+        report_type = _ReportChoice(sorted(declared_static))
+        report_help = (
+            "Report name(s) to display (can be specified multiple times). "
+            "Shows all if omitted. Valid values: "
+            f"{', '.join(sorted(declared_static))}."
+        )
+    else:
+        report_type = None
+        report_help = (
+            "Report name(s) to display (can be specified multiple times). "
+            "Shows all if omitted. Hyphens are normalised to underscores."
+        )
+
     # Apply option group for tabulated output formatting
     decorated = REPORT_OUTPUT_GROUP.option(
         "--report",
         multiple=True,
-        help="Report name(s) to display (can be specified multiple times). Shows all if omitted."
+        type=report_type,
+        callback=_normalise_report_arg,
+        help=report_help,
     )(
         REPORT_OUTPUT_GROUP.option(
             "--header/--no-header",
@@ -194,6 +418,17 @@ def report_output(
                 raise TypeError(
                     f"Command decorated with @report_output must return Reports or None, "
                     f"not {type(result).__name__}"
+                )
+
+            # Drift detection: when a reports= declaration exists, any
+            # returned name that isn't in the declared static set (and
+            # isn't admitted by an Ellipsis slot) is a hard failure.
+            # Declaration-less commands skip this check entirely.
+            if reports is not None:
+                _check_drift(
+                    result,
+                    reports,
+                    command_name=(func.__name__ or "<anonymous>").replace("_", "-"),
                 )
 
             # Determine which reports to show using Container protocol
@@ -261,6 +496,23 @@ def report_output(
             # Format and output
             output = format_as(reports_to_format, as_format)
             click.echo(output)
+
+    # Attach the declaration to the wrapper so the introspection
+    # factories can read it via a well-known attribute name once Click
+    # wraps the function as a Command.
+    wrapper._asyoulikeit_reports = reports
+
+    # Extend the docstring with the "Produces reports:" section so it
+    # appears in Click's --help output. Click only reads its `epilog`
+    # from the @click.command() kwarg, which we can't set from inside
+    # this decorator — the docstring is the one surface we can influence
+    # that Click actually renders.
+    if reports is not None:
+        epilog = _build_reports_epilog(reports)
+        existing_doc = (wrapper.__doc__ or "").rstrip()
+        wrapper.__doc__ = (
+            f"{existing_doc}\n\n{epilog}\n" if existing_doc else f"{epilog}\n"
+        )
 
     return wrapper
 
