@@ -558,7 +558,7 @@ def list_formatters_command() -> click.Command:
     def list_formatters():
         """List the available report output formatters."""
         table = (
-            TableContent(title="Available formatters")
+            TableContent(title="Formatters for use with --as")
             .add_column("name", "Name")
             .add_column("description", "Description")
         )
