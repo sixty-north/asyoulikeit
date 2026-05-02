@@ -1,6 +1,6 @@
 """Utilities for enriching CLI tools with structured report output."""
 
-__version__ = "1.1.0"
+__version__ = "1.1.1"
 
 from asyoulikeit.cli import (
     ALL_REPORTS,
