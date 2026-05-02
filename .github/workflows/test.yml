@@ -83,6 +83,11 @@ jobs:
         run: uv pip install dist/*.whl
 
       - name: Run tests against the installed wheel
-        # --no-project stops uv from re-syncing the environment (which
-        # would reinstate an editable install and defeat the point).
-        run: uv run --no-project pytest -v
+        # --no-sync keeps the project's .venv/ (where the wheel was just
+        # installed) and skips the implicit re-sync that would otherwise
+        # reinstate an editable install of the source tree, defeating
+        # the point. --no-project would *also* skip the re-sync, but it
+        # discards the project venv entirely and falls back to whatever
+        # interpreter uv discovers next (e.g. one named in a developer's
+        # ~/.python-version), which then has none of the dev deps.
+        run: uv run --no-sync pytest -v
