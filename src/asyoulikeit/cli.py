@@ -19,7 +19,13 @@ from click_option_group import OptionGroup
 from asyoulikeit.exceptions import ReportDeclarationError
 from asyoulikeit.formatter import describe_formatter, formatter_names, format_as
 from asyoulikeit.scalar_data import ScalarContent
-from asyoulikeit.tabular_data import DetailLevel, Report, Reports, TableContent
+from asyoulikeit.tabular_data import (
+    DetailLevel,
+    Importance,
+    Report,
+    Reports,
+    TableContent,
+)
 from asyoulikeit.tree_data import TreeContent
 
 
@@ -706,15 +712,19 @@ def list_reports_command() -> click.Command:
     itself decorated with ``@report_output``, so it inherits
     ``--as / --report / --header / --detailed`` and renders in any
     format. The payload is a :class:`~asyoulikeit.TreeContent` with one
-    root node per ``@report_output`` command discovered under the root
-    Click group and children for each declared report (name +
-    description). Because ``reports=`` is required on every
-    ``@report_output`` command, every discovered report-output command
-    shows its declared names; a group may also contain plain
-    ``@click.command`` commands that aren't asyoulikeit-aware, and
-    those surface with a single ``<not a report-output command>``
-    marker child. Action commands declared with ``reports={}`` show
-    ``<no reports>``.
+    root node per command discovered under the root Click group and
+    children for each declared report (name + description). Commands
+    that produce no named reports — plain ``@click.command`` commands
+    that aren't asyoulikeit-aware, and action commands declared with
+    ``reports={}`` — surface with a single ``<no reports>`` marker
+    child.
+
+    With no command argument, the listing **defaults to essential
+    detail**, and report-less commands are tagged ``DETAIL`` so they
+    drop out of that view: the default listing shows only commands that
+    actually produce named reports. ``--detailed`` brings the report-
+    less commands back for the full picture. Naming a specific command
+    always shows it in full regardless of detail level.
 
     The host CLI adds it under whatever name suits it::
 
@@ -722,7 +732,8 @@ def list_reports_command() -> click.Command:
 
     Usage::
 
-        mytool list-reports                # every command + its reports
+        mytool list-reports                # report-producing commands
+        mytool list-reports --detailed     # every command, reports or not
         mytool list-reports video-audit    # one command only
 
     The command walks ``click.get_current_context().find_root()`` at
@@ -735,7 +746,11 @@ def list_reports_command() -> click.Command:
         "reports": "Hierarchical listing of CLI commands and their declared reports.",
     })
     def list_reports(command: Optional[str]) -> Reports:
-        """List every ``@report_output`` command in this CLI with its declared reports."""
+        """List the named reports produced by a command and selectable with ``--report``.
+
+        If no command is specified, the named reports of all commands
+        are listed.
+        """
         root = click.get_current_context().find_root().command
         if not isinstance(root, click.Group):
             # This is a wiring mistake by the CLI author, not something
@@ -762,22 +777,29 @@ def list_reports_command() -> click.Command:
             if command is not None and display_name != command:
                 continue
             short_help = (cmd.get_short_help_str() or "").strip() or "(no description)"
-            root_node = tree.add_root(name=display_name, description=short_help)
             declaration = _declared_reports(cmd)
-            if declaration is None:
-                # Command wasn't decorated with @report_output at all
-                # (e.g. a plain @click.command that the host added to
-                # the same group). Surface it so authors can see which
-                # of their commands sit outside asyoulikeit.
-                root_node.add_child(
-                    name="<not a report-output command>",
-                    description="(command is not decorated with @report_output)",
-                )
-                continue
-            if not declaration:
+            # A command produces no named reports if it wasn't decorated
+            # at all (declaration is None) or was declared with an empty
+            # reports={} (an action command). Both are noise in the
+            # default listing, so when no command is named we tag their
+            # root DETAIL — the essential view then lists only commands
+            # that actually produce reports, and --detailed brings these
+            # back. A named command is always shown in full.
+            report_less = not declaration
+            root_importance = (
+                Importance.DETAIL
+                if command is None and report_less
+                else Importance.ESSENTIAL
+            )
+            root_node = tree.add_root(
+                name=display_name,
+                description=short_help,
+                _importance=root_importance,
+            )
+            if report_less:
                 root_node.add_child(
                     name="<no reports>",
-                    description="(action command — returns None)",
+                    description="(command produces no named reports)",
                 )
                 continue
             static_names = sorted(
@@ -793,7 +815,15 @@ def list_reports_command() -> click.Command:
                 f"No command named {command!r} in this CLI."
             )
 
-        return Reports(reports=Report(data=tree))
+        # No command named → default to essential detail (across all
+        # formats), so the listing surfaces only report-producing
+        # commands unless the user asks for --detailed. Naming a
+        # command leaves the level on AUTO so each formatter applies
+        # its own default and shows that command in full.
+        detail_level = (
+            DetailLevel.ESSENTIAL if command is None else DetailLevel.AUTO
+        )
+        return Reports(reports=Report(data=tree, detail_level=detail_level))
 
     # Mark the callback (not the Command) so _walk_commands can skip
     # this command when it's listing reports — we check the attribute

@@ -532,16 +532,19 @@ and render in any format:
 
 .. code-block:: console
 
-   $ mytool list-reports                       # full listing
+   $ mytool list-reports                       # report-producing commands
+   $ mytool list-reports --detailed            # every command, reports or not
    $ mytool list-reports video-audit           # one command
    $ mytool describe-report video-audit courses
    $ mytool describe-report video-audit '<dynamic>'   # describe the Ellipsis slot
 
-A host group may also contain plain ``@click.command`` commands that
-aren't asyoulikeit-aware; those surface in ``list-reports`` with a
-single ``<not a report-output command>`` marker child, so authors can
-see at a glance which commands sit outside the library. Action
-commands declared with ``reports={}`` show ``<no reports>``.
+With no command argument, ``list-reports`` defaults to *essential*
+detail and lists only the commands that actually produce named
+reports. Commands that produce none — plain ``@click.command``
+commands that aren't asyoulikeit-aware, and action commands declared
+with ``reports={}`` — are shown with a single ``<no reports>`` marker
+child and surface only under ``--detailed``. Naming a specific command
+always shows it in full, whatever its kind.
 
 
 .. _formatter-introspection:

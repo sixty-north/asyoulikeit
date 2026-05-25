@@ -940,7 +940,7 @@ class TestListReportsCommand:
         # ordinary click commands.
         @click.command()
         def plain():
-            """Plain command (not a @report_output command)."""
+            """Plain command that produces no reports."""
             click.echo("ran plain")
 
         # An action command with reports={} — exercises the
@@ -985,17 +985,51 @@ class TestListReportsCommand:
         assert "<dynamic>" in result.output
         assert "One report per input" in result.output
 
-    def test_non_report_output_command_marked_as_not_asyoulikeit(self):
+    def test_default_essential_view_hides_report_less_commands(self):
+        # Issue #11: with no command named, the listing defaults to
+        # essential detail — only commands that produce named reports
+        # appear. 'plain' (undecorated) and 'act' (reports={}) produce
+        # none, so they're omitted.
         cli = self._make_cli()
         result = CliRunner().invoke(cli, ["list-reports", "--as", "tsv"])
-        assert "plain" in result.output
-        assert "<not a report-output command>" in result.output
+        assert "audit" in result.output
+        assert "validate" in result.output
+        assert "plain" not in result.output
+        assert "act" not in result.output
+        assert "<no reports>" not in result.output
 
-    def test_action_command_with_empty_declaration_marked_no_reports(self):
+    def test_detailed_view_shows_report_less_commands(self):
+        # Issue #11: --detailed restores the full picture. Both kinds of
+        # report-less command (undecorated and reports={}) surface under
+        # a single neutral "<no reports>" placeholder (issue #12).
         cli = self._make_cli()
-        result = CliRunner().invoke(cli, ["list-reports", "--as", "tsv"])
+        result = CliRunner().invoke(
+            cli, ["list-reports", "--as", "tsv", "--detailed"]
+        )
+        assert "plain" in result.output
         assert "act" in result.output
         assert "<no reports>" in result.output
+        assert "(command produces no named reports)" in result.output
+
+    def test_naming_a_report_less_command_shows_it_regardless(self):
+        # Naming a specific command shows it in full, whatever its kind
+        # and whatever the detail level — behaviour unchanged by #11.
+        cli = self._make_cli()
+        result = CliRunner().invoke(cli, ["list-reports", "plain", "--as", "tsv"])
+        assert "plain" in result.output
+        assert "<no reports>" in result.output
+
+    def test_help_and_placeholder_do_not_leak_the_decorator(self):
+        # Issue #12: neither the command help nor the report-less
+        # placeholder may mention the @report_output decorator.
+        cli = self._make_cli()
+        listing = CliRunner().invoke(
+            cli, ["list-reports", "--as", "tsv", "--detailed"]
+        )
+        assert "report_output" not in listing.output
+        assert "not a report-output command" not in listing.output
+        help_text = CliRunner().invoke(cli, ["list-reports", "--help"]).output
+        assert "report_output" not in help_text
 
     def test_list_reports_excludes_itself_from_listing(self):
         # The introspection command must not appear in its own output.
@@ -1021,7 +1055,11 @@ class TestListReportsCommand:
 
     def test_json_output_has_tree_metadata(self):
         cli = self._make_cli()
-        result = CliRunner().invoke(cli, ["list-reports", "--as", "json"])
+        # --detailed so the report-less commands are included in the dump
+        # (the essential default would omit them — see issue #11).
+        result = CliRunner().invoke(
+            cli, ["list-reports", "--as", "json", "--detailed"]
+        )
         assert result.exit_code == 0
         parsed = json.loads(result.output)
         report = parsed["reports"]["reports"]
@@ -1031,6 +1069,18 @@ class TestListReportsCommand:
         assert "validate" in root_names
         assert "plain" in root_names
         assert "act" in root_names
+
+    def test_json_default_essential_omits_report_less_commands(self):
+        # The essential default applies across formats, not just the
+        # human display one (issue #11).
+        cli = self._make_cli()
+        result = CliRunner().invoke(cli, ["list-reports", "--as", "json"])
+        assert result.exit_code == 0
+        root_names = [
+            root["values"]["name"]
+            for root in json.loads(result.output)["reports"]["reports"]["roots"]
+        ]
+        assert root_names == ["audit", "validate"]
 
     def test_display_output_contains_each_declared_name(self):
         cli = self._make_cli()
