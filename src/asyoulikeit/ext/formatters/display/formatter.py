@@ -11,6 +11,7 @@ hierarchical shape is visible while other columns still line up as a table.
 from io import StringIO
 from typing import Optional
 
+from rich.cells import cell_len
 from rich.console import Console
 from rich.style import Style
 from rich.table import Table
@@ -182,19 +183,12 @@ class DisplayFormatter(Formatter):
 
         non_header_cols = [c for c in columns if not c.header]
 
-        table = Table(
-            title=data.title if header else None,
-            caption=data.description if header else None,
-            show_header=header,
-        )
-        for col in columns:
-            if col.header:
-                table.add_column(col.label, style="bold")
-            else:
-                table.add_column(col.label)
-
-        # Walk the forest and emit (ascii_art, node) pairs.
-        rendered = []
+        # Walk the forest and emit (ascii_art, continuation_prefix, node)
+        # triples. ``continuation_prefix`` is the spine to repeat in the
+        # Name column on wrapped continuation rows: ``│`` at every
+        # ancestor depth that still has following siblings, blank where
+        # the branch has ended.
+        rendered: list[tuple[str, str, Node]] = []
         for root in data.roots:
             self._walk_subtree(
                 root,
@@ -205,12 +199,81 @@ class DisplayFormatter(Formatter):
                 out=rendered,
             )
 
-        for art, node in rendered:
-            header_cell = art + str(node.values[header_col.key])
-            other_cells = [str(node.values[col.key]) for col in non_header_cols]
-            table.add_row(header_cell, *other_cells)
+        console = Console(file=StringIO(), force_terminal=True)
+        table = Table(
+            title=data.title if header else None,
+            caption=data.description if header else None,
+            show_header=header,
+        )
 
-        return self._render_to_string(table)
+        # Natural (unwrapped) content widths — what Rich would size each
+        # column to if nothing needed wrapping. The header column carries
+        # the tree art, so its content is ``art + name``.
+        name_w = max(
+            [cell_len(art + str(node.values[header_col.key]))
+             for art, _c, node in rendered]
+            + ([cell_len(header_col.label)] if header else [])
+            + [1]
+        )
+        data_naturals = [
+            max(
+                [cell_len(str(node.values[col.key]))
+                 for _a, _c, node in rendered]
+                + ([cell_len(col.label)] if header else [])
+                + [1]
+            )
+            for col in non_header_cols
+        ]
+        # Box overhead for N columns with the default box + (0, 1)
+        # padding: N+1 vertical borders plus 2 padding columns each.
+        overhead = 3 * len(columns) + 1
+        natural_total = name_w + sum(data_naturals) + overhead
+
+        if natural_total <= console.width:
+            # Nothing wraps: keep Rich's natural, content-sized layout —
+            # byte-identical to the pre-#13 rendering.
+            for col in columns:
+                table.add_column(col.label, style="bold" if col.header else None)
+            for art, _cont, node in rendered:
+                header_cell = art + str(node.values[header_col.key])
+                other_cells = [str(node.values[col.key]) for col in non_header_cols]
+                table.add_row(header_cell, *other_cells)
+        else:
+            # At least one cell must wrap. Pin every column to an explicit
+            # width and emit one Rich row per *visual* line, so the Name
+            # column can carry the tree's vertical spine down the wrapped
+            # continuation rows (issue #13). Pinning the widths also keeps
+            # the box square — Rich's auto-sizer otherwise drew a bottom
+            # border wider than the body once a column wrapped.
+            data_widths = self._distribute_widths(
+                data_naturals, console.width - overhead - name_w
+            )
+            width_of = {header_col.key: name_w}
+            for col, w in zip(non_header_cols, data_widths):
+                width_of[col.key] = w
+            for col in columns:
+                table.add_column(
+                    col.label,
+                    style="bold" if col.header else None,
+                    width=width_of[col.key],
+                )
+            for art, cont, node in rendered:
+                name_text = art + str(node.values[header_col.key])
+                name_lines = self._wrap(console, name_text, name_w)
+                data_lines = [
+                    self._wrap(console, str(node.values[col.key]), width_of[col.key])
+                    for col in non_header_cols
+                ]
+                height = max([len(name_lines)] + [len(dl) for dl in data_lines])
+                # Continuation rows repeat the spine in the Name column;
+                # data columns pad with blanks.
+                name_col = name_lines + [cont] * (height - len(name_lines))
+                data_cols = [dl + [""] * (height - len(dl)) for dl in data_lines]
+                for i in range(height):
+                    table.add_row(name_col[i], *[dc[i] for dc in data_cols])
+
+        console.print(table)
+        return console.file.getvalue()
 
     def _format_tree_bare(
         self,
@@ -226,7 +289,7 @@ class DisplayFormatter(Formatter):
         information. Title and description are included as plain lines
         above and below the tree when ``header`` is true.
         """
-        rendered: list[tuple[str, Node]] = []
+        rendered: list[tuple[str, str, Node]] = []
         for root in data.roots:
             self._walk_subtree(
                 root,
@@ -241,7 +304,7 @@ class DisplayFormatter(Formatter):
         if header and data.title:
             lines.append(data.title)
             lines.append("")
-        for art, node in rendered:
+        for art, _cont, node in rendered:
             lines.append(art + str(node.values[header_col.key]))
         if header and data.description:
             lines.append("")
@@ -260,10 +323,13 @@ class DisplayFormatter(Formatter):
         detail_level: DetailLevel,
         out: list,
     ) -> None:
-        """Populate ``out`` with (ascii_art_prefix, node) pairs in pre-order.
+        """Populate ``out`` with (ascii_art, continuation_prefix, node) triples.
 
-        DETAIL nodes (and their descendants) are pruned when
-        ``detail_level == ESSENTIAL``.
+        Emitted in pre-order. ``continuation_prefix`` is what the Name
+        column should show on this node's wrapped continuation rows: the
+        same spine its children inherit (``│`` where a sibling still
+        follows, blank under a ``└──``). DETAIL nodes (and their
+        descendants) are pruned when ``detail_level == ESSENTIAL``.
         """
         if not self._node_visible(node, detail_level):
             return
@@ -276,7 +342,7 @@ class DisplayFormatter(Formatter):
             art = prefix + connector
             child_prefix = prefix + ("    " if is_last else "│   ")
 
-        out.append((art, node))
+        out.append((art, child_prefix, node))
 
         visible_children = [
             c for c in node.children if self._node_visible(c, detail_level)
@@ -297,6 +363,47 @@ class DisplayFormatter(Formatter):
         if detail_level == DetailLevel.ESSENTIAL and node.importance == Importance.DETAIL:
             return False
         return True
+
+    @staticmethod
+    def _wrap(console: Console, text: str, width: int) -> list[str]:
+        """Word-wrap ``text`` to ``width`` using Rich's own wrapper.
+
+        Returns the plain text of each wrapped line (never empty — an
+        empty cell yields a single empty line) so it matches exactly how
+        Rich would lay the same text out inside a fixed-width table cell.
+        """
+        lines = [line.plain for line in Text(text).wrap(console, width)]
+        return lines or [""]
+
+    @staticmethod
+    def _distribute_widths(naturals: list[int], available: int) -> list[int]:
+        """Split ``available`` columns across data columns, mirroring Rich.
+
+        Allocates proportionally to each column's natural content width,
+        never below 1, summing to exactly ``available``. The common
+        single-data-column case simply takes the whole budget. Used only
+        on the wrapping path, where the columns must fit a fixed width.
+        """
+        if not naturals:
+            return []
+        if available < len(naturals):
+            return [1] * len(naturals)
+        total = sum(naturals) or 1
+        exact = [n / total * available for n in naturals]
+        widths = [max(1, int(x)) for x in exact]
+        remainder = available - sum(widths)
+        # Hand leftover columns to the largest fractional parts first.
+        order = sorted(
+            range(len(naturals)),
+            key=lambda i: exact[i] - int(exact[i]),
+            reverse=True,
+        )
+        j = 0
+        while remainder > 0:
+            widths[order[j % len(order)]] += 1
+            remainder -= 1
+            j += 1
+        return widths
 
     # -- scalar -------------------------------------------------------------
 

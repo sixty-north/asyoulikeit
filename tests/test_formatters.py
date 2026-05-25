@@ -957,6 +957,47 @@ class TestDisplayTreeRendering:
         assert "keep" in result
         assert "hidden" not in result
 
+    def test_wrapped_rows_continue_the_spine_for_siblings(self):
+        # Issue #13: when a node's content wraps, its continuation rows
+        # must carry the vertical spine in the Name column for a node
+        # that still has following siblings, and stay blank under the
+        # last child.
+        long = (
+            "A deliberately long description engineered to wrap across "
+            "several lines so the continuation rows are exercised by the "
+            "renderer at the standard eighty-column width."
+        )
+        tree = (
+            TreeContent()
+            .add_column("name", "Name", header=True)
+            .add_column("description", "Description")
+        )
+        root = tree.add_root(name="root", description="short root summary")
+        root.add_child(name="first", description=long)   # has a sibling below
+        root.add_child(name="last", description=long)     # last child
+        lines = self._render(tree).splitlines()
+
+        def continuation_rows_after(marker):
+            start = next(i for i, ln in enumerate(lines) if marker in ln)
+            rows = []
+            for ln in lines[start + 1:]:
+                # A new node row carries a connector; stop there.
+                if "├──" in ln or "└──" in ln or ln.startswith("└"):
+                    break
+                rows.append(ln)
+            return rows
+
+        # 'first' has a sibling below → its wrapped rows show the spine.
+        first_cont = continuation_rows_after("├── first")
+        assert first_cont, "expected wrapped continuation rows for 'first'"
+        assert all("│ │" in row for row in first_cont)
+
+        # 'last' is the final child → its wrapped rows leave the Name
+        # column blank (no severed spine to continue).
+        last_cont = continuation_rows_after("└── last")
+        assert last_cont, "expected wrapped continuation rows for 'last'"
+        assert all("│ │" not in row for row in last_cont)
+
 
 class TestDisplayTreeChromeDrop:
     """When a sole tree has only the header column, the table chrome is dropped."""
