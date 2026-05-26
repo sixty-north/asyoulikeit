@@ -47,6 +47,14 @@ Scalar content
    :show-inheritance:
 
 
+Audience-aware values
+---------------------
+
+.. automodule:: asyoulikeit.audience
+   :members:
+   :show-inheritance:
+
+
 The report-output decorator
 ---------------------------
 

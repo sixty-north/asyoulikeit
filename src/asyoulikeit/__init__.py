@@ -2,6 +2,7 @@
 
 __version__ = "1.1.2"
 
+from asyoulikeit.audience import Audience, ByAudience, resolve_audience
 from asyoulikeit.cli import (
     ALL_REPORTS,
     describe_formatter_command,
@@ -41,6 +42,8 @@ from asyoulikeit.tree_data import Node, TreeContent
 __all__ = [
     "ALL_REPORTS",
     "AsyoulikeitError",
+    "Audience",
+    "ByAudience",
     "Column",
     "DetailLevel",
     "Extension",
@@ -71,4 +74,5 @@ __all__ = [
     "list_formatters_command",
     "list_reports_command",
     "report_output",
+    "resolve_audience",
 ]

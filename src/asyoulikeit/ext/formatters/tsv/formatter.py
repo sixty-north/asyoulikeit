@@ -1,5 +1,6 @@
 """Tab-separated values formatter."""
 
+from asyoulikeit.audience import Audience
 from asyoulikeit.formatter import Formatter
 from asyoulikeit.scalar_data import ScalarContent
 from asyoulikeit.tabular_data import DetailLevel, Importance, Reports, TableContent
@@ -29,6 +30,8 @@ class TsvFormatter(Formatter):
     (counting the root as depth 1); the largest ``PathN`` in the
     header row reveals the tree's maximum visible depth.
     """
+
+    audience = Audience.MACHINE
 
     def format(self, reports: Reports) -> str:
         """Format reports as TSV with optional header rows.

@@ -17,6 +17,7 @@ from rich.style import Style
 from rich.table import Table
 from rich.text import Text
 
+from asyoulikeit.audience import Audience
 from asyoulikeit.formatter import Formatter
 from asyoulikeit.scalar_data import ScalarContent
 from asyoulikeit.tabular_data import (
@@ -44,6 +45,8 @@ class DisplayFormatter(Formatter):
 
     Multiple reports are separated by blank lines.
     """
+
+    audience = Audience.HUMAN
 
     def format(self, reports: Reports) -> str:
         """Format reports as Rich tables, separated by blank lines."""

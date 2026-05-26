@@ -2,6 +2,7 @@
 
 import json
 
+from asyoulikeit.audience import Audience
 from asyoulikeit.formatter import Formatter
 from asyoulikeit.scalar_data import ScalarContent
 from asyoulikeit.tabular_data import DetailLevel, Importance, Reports, TableContent
@@ -27,6 +28,8 @@ class JsonFormatter(Formatter):
     JSON always emits full metadata regardless of the ``header`` flag,
     since the format is self-describing by nature.
     """
+
+    audience = Audience.MACHINE
 
     def format(self, reports: Reports) -> str:
         """Format reports as a structured JSON object.

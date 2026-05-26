@@ -3,6 +3,7 @@
 from abc import abstractmethod
 from typing import Type
 
+from asyoulikeit.audience import Audience, resolve_audience
 from asyoulikeit.extension import (
     Extension, ExtensionError, create_extension, describe_extension,
     list_extensions, extension,
@@ -18,7 +19,16 @@ class Formatter(Extension):
 
     Formatters convert a :class:`Reports` collection into text suitable for a
     particular output channel (terminal table, TSV, JSON, etc.).
+
+    Attributes:
+        audience: The reader this formatter's output is aimed at. Drives
+            :class:`~asyoulikeit.ByAudience` collapse in :func:`format_as`.
+            Defaults to :attr:`Audience.MACHINE` so that a yet-undeclared
+            third-party formatter receives the raw / canonical value, never a
+            lossy human rendering — subclasses override as appropriate.
     """
+
+    audience: Audience = Audience.MACHINE
 
     @classmethod
     def _kind(cls):
@@ -138,6 +148,9 @@ def format_as(
     """
     try:
         formatter = create_formatter(format_name)
+        # Collapse any ByAudience cells to the representation matching this
+        # formatter's audience before dispatch, so format() never sees them.
+        reports = resolve_audience(reports, formatter.audience)
         return formatter.format(reports)
     except FormatterExtensionError:
         # Provide a more user-friendly error message
