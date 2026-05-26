@@ -25,6 +25,8 @@ Take thou a handler that returneth `Reports`, and with `@report_output` do thou 
 
 ## Act Ⅰ   a table, of the wives of Henry VIII
 
+Mark well the column of **Marriage**, a thing of double aspect: each entry therein weareth two faces, and `ByAudience` holdeth both at once. To the engines of pipe and web it speaketh a bare numeral, fit for reck'ning and for sorting; but unto thine own eye it telleth the selfsame rank as a word writ fair. Thou needst not choose betwixt them at the cell's making — the format thou electest with `--as` doth choose the face, and so the machine readeth `1` where the reader beholdeth *first*.
+
 *Enter* **`henry-wives.py`**:
 
 ```python
@@ -43,6 +45,7 @@ Or force a specific format:
 import click
 
 from asyoulikeit import (
+    ByAudience,
     Importance,
     Report,
     Reports,
@@ -55,21 +58,26 @@ from asyoulikeit import (
 @report_output(reports={"wives": "The six wives of Henry VIII."})
 def list_wives():
     """List the six wives of Henry VIII."""
+    # The "Marriage" cells carry two faces via ByAudience: the raw ordinal
+    # number for machines (so JSON emits 1, not "first", and a pipe can sort
+    # on it) and the word for the human eye. The dispatcher picks the face
+    # matching the chosen formatter's audience.
     data = (
         TableContent(
             title="Wives of Henry VIII",
             description="Divorced, beheaded, died; divorced, beheaded, survived.",
         )
         .add_column("name", "Name")
+        .add_column("marriage", "Marriage")
         .add_column("born", "Born")
         .add_column("fate", "Fate")
         .add_column("queenship", "Queenship", importance=Importance.DETAIL)
-        .add_row(name="Catherine of Aragon", born=1485, fate="Divorced", queenship="1509-1533")
-        .add_row(name="Anne Boleyn", born=1501, fate="Beheaded", queenship="1533-1536")
-        .add_row(name="Jane Seymour", born=1508, fate="Died", queenship="1536-1537")
-        .add_row(name="Anne of Cleves", born=1515, fate="Divorced", queenship="1540")
-        .add_row(name="Catherine Howard", born=1523, fate="Beheaded", queenship="1540-1542")
-        .add_row(name="Catherine Parr", born=1512, fate="Survived", queenship="1543-1547")
+        .add_row(name="Catherine of Aragon", marriage=ByAudience(machine=1, human="first"), born=1485, fate="Divorced", queenship="1509-1533")
+        .add_row(name="Anne Boleyn", marriage=ByAudience(machine=2, human="second"), born=1501, fate="Beheaded", queenship="1533-1536")
+        .add_row(name="Jane Seymour", marriage=ByAudience(machine=3, human="third"), born=1508, fate="Died", queenship="1536-1537")
+        .add_row(name="Anne of Cleves", marriage=ByAudience(machine=4, human="fourth"), born=1515, fate="Divorced", queenship="1540")
+        .add_row(name="Catherine Howard", marriage=ByAudience(machine=5, human="fifth"), born=1523, fate="Beheaded", queenship="1540-1542")
+        .add_row(name="Catherine Parr", marriage=ByAudience(machine=6, human="sixth"), born=1512, fate="Survived", queenship="1543-1547")
     )
     return Reports(wives=Report(data=data))
 
@@ -85,13 +93,13 @@ $ python henry-wives.py --as tsv
 ```
 
 ```
-# Name                 Born    Fate
-Catherine of Aragon    1485    Divorced
-Anne Boleyn            1501    Beheaded
-Jane Seymour           1508    Died
-Anne of Cleves         1515    Divorced
-Catherine Howard       1523    Beheaded
-Catherine Parr         1512    Survived
+# Name                 Marriage    Born    Fate
+Catherine of Aragon    1           1485    Divorced
+Anne Boleyn            2           1501    Beheaded
+Jane Seymour           3           1508    Died
+Anne of Cleves         4           1515    Divorced
+Catherine Howard       5           1523    Beheaded
+Catherine Parr         6           1512    Survived
 ```
 
 ### Scene ⅱ   `--as json`,   for the contrivances of the web
@@ -117,6 +125,11 @@ $ python henry-wives.py --as json
           "header": false
         },
         {
+          "key": "marriage",
+          "label": "Marriage",
+          "header": false
+        },
+        {
           "key": "born",
           "label": "Born",
           "header": false
@@ -135,36 +148,42 @@ $ python henry-wives.py --as json
       "rows": [
         {
           "name": "Catherine of Aragon",
+          "marriage": 1,
           "born": 1485,
           "fate": "Divorced",
           "queenship": "1509-1533"
         },
         {
           "name": "Anne Boleyn",
+          "marriage": 2,
           "born": 1501,
           "fate": "Beheaded",
           "queenship": "1533-1536"
         },
         {
           "name": "Jane Seymour",
+          "marriage": 3,
           "born": 1508,
           "fate": "Died",
           "queenship": "1536-1537"
         },
         {
           "name": "Anne of Cleves",
+          "marriage": 4,
           "born": 1515,
           "fate": "Divorced",
           "queenship": "1540"
         },
         {
           "name": "Catherine Howard",
+          "marriage": 5,
           "born": 1523,
           "fate": "Beheaded",
           "queenship": "1540-1542"
         },
         {
           "name": "Catherine Parr",
+          "marriage": 6,
           "born": 1512,
           "fate": "Survived",
           "queenship": "1543-1547"
@@ -182,19 +201,18 @@ $ python henry-wives.py --as display
 ```
 
 ```
-                 Wives of Henry VIII                 
-┏━━━━━━━━━━━━━━━━━━━━━┳━━━━━━┳━━━━━━━━━━┳━━━━━━━━━━━┓
-┃ Name                ┃ Born ┃ Fate     ┃ Queenship ┃
-┡━━━━━━━━━━━━━━━━━━━━━╇━━━━━━╇━━━━━━━━━━╇━━━━━━━━━━━┩
-│ Catherine of Aragon │ 1485 │ Divorced │ 1509-1533 │
-│ Anne Boleyn         │ 1501 │ Beheaded │ 1533-1536 │
-│ Jane Seymour        │ 1508 │ Died     │ 1536-1537 │
-│ Anne of Cleves      │ 1515 │ Divorced │ 1540      │
-│ Catherine Howard    │ 1523 │ Beheaded │ 1540-1542 │
-│ Catherine Parr      │ 1512 │ Survived │ 1543-1547 │
-└─────────────────────┴──────┴──────────┴───────────┘
-    Divorced, beheaded, died; divorced, beheaded,    
-                      survived.
+                      Wives of Henry VIII                       
+┏━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━┳━━━━━━┳━━━━━━━━━━┳━━━━━━━━━━━┓
+┃ Name                ┃ Marriage ┃ Born ┃ Fate     ┃ Queenship ┃
+┡━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━╇━━━━━━╇━━━━━━━━━━╇━━━━━━━━━━━┩
+│ Catherine of Aragon │ first    │ 1485 │ Divorced │ 1509-1533 │
+│ Anne Boleyn         │ second   │ 1501 │ Beheaded │ 1533-1536 │
+│ Jane Seymour        │ third    │ 1508 │ Died     │ 1536-1537 │
+│ Anne of Cleves      │ fourth   │ 1515 │ Divorced │ 1540      │
+│ Catherine Howard    │ fifth    │ 1523 │ Beheaded │ 1540-1542 │
+│ Catherine Parr      │ sixth    │ 1512 │ Survived │ 1543-1547 │
+└─────────────────────┴──────────┴──────┴──────────┴───────────┘
+    Divorced, beheaded, died; divorced, beheaded, survived.
 ```
 
 ## Act Ⅱ   two trees, in the forest of Arden
